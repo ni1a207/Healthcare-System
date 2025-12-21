@@ -1,0 +1,39 @@
+@startuml
+autonumber
+skinparam backgroundColor white
+skinparam BoxPadding 10
+
+actor "Администратор" as Admin
+participant "API Gateway" as GW
+participant "Patient Service" as PS
+database "Patient DB" as PDB
+participant "Billing Service" as BS
+database "Billing DB" as BDB
+queue "Kafka\n(patient-created)" as Kafka
+participant "Analytics Service" as Analytics
+participant "Notification Service" as Notify
+
+Admin -> GW : POST /api/patient
+GW -> PS : Проксирование запроса
+PS -> PDB : Сохранение данных пациента
+PDB --> PS : Entity saved
+
+note over PS, BS : Синхронное взаимодействие (gRPC)
+PS -> BS : gRPC: createBilling(patientId, 100.0)
+BS -> BDB : Создание счета
+BDB --> BS : Invoice saved
+BS --> PS : gRPC Response: Success
+
+note over PS, Kafka : Асинхронное взаимодействие
+PS -> Kafka : Publish: { patientId }
+PS --> GW : 201 Created
+GW --> Admin : 201 Created
+
+par Параллельная обработка событий
+    Kafka -> Analytics : Consume event
+    Analytics -> Analytics : Обновление статистики в БД
+else
+    Kafka -> Notify : Consume event
+    Notify -> Notify : Логирование отправки уведомления
+end
+@enduml

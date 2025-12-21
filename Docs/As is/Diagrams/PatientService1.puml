@@ -1,0 +1,48 @@
+@startuml
+autonumber
+skinparam monochrome true
+skinparam shadowing false
+
+actor "User" as U
+participant "Frontend" as FE
+participant "API Gateway" as GW
+participant "Auth Service" as AS
+database "Auth DB" as DB
+
+U -> FE : Вводит логин/пароль,\nнажимает кнопку "Войти"
+FE -> GW : HTTP POST /api/v1/auth/login + JSON
+GW -> AS : Проксирование запроса
+
+AS-> AS : Валидация входных параметров
+alt Входные параметры невалидны
+    AS -> GW : 400 BAD REQUEST
+    GW -> FE : 400 BAD REQUEST
+    FE -> U : Отобразить ошибку валидации
+else Параметры валидны
+    AS -> DB : SELECT * FROM users\nWHERE username = {username}
+    DB->DB: Выполнение\nзапроса
+    DB -> AS : Ответ
+
+    alt Пользователь не найден
+        AS -> GW : 401 UNAUTHORIZED
+        GW -> FE : 401 UNAUTHORIZED
+        FE -> U : Отобразить ошибку авторизации
+
+    else Пользователь найден
+        AS->AS: BCrypt: сравнение присланного\nпароля и хэша из БД
+
+        alt Хэш не совпал
+            AS -> GW : 401 UNAUTHORIZED
+            GW -> FE : 401 UNAUTHORIZED
+            FE -> U : Отобразить\n"Неверный логин или пароль"
+        else Пароль верный
+            AS-> AS : Генерация JWT
+            AS -> GW : 200 OK + JwtResponse
+            GW -> FE : 200 OK + JwtResponse
+            FE -> FE : Сохранение JWT в localStorage
+            FE -> U : Редирект на главную страницу
+        end
+    end
+end
+
+@enduml
