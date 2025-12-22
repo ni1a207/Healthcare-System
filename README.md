@@ -6,14 +6,14 @@
 
 ---
 ## Структура репозитория
-* **Docs** — артефакты системного и бизнес-анализа:
+* **Docs** — артефакты системного и бизнес-анализа
   * As is — текущее состояние системы
-    * API — интеграционные интерфейсы системы.
-    * Diagrams — C4, SQD, BPMN.
-    * Services — информация о сервисах.
-    * **[Healthcare.md](https://github.com/ni1a207/Healthcare-System/blob/main/Docs/As%20is/Healthcare.md)** - Техническая спецификация о системе (с включением всего содержимого из вспомогательных папок выше)**
+    * API — интеграционные интерфейсы системы
+    * Diagrams — C4, SQD, BPMN
+    * Services — информация о сервисах
+    * **[Healthcare.md](https://github.com/ni1a207/Healthcare-System/blob/main/Docs/As%20is/Healthcare.md)** - Техническая спецификация о системе (с включением всего содержимого из вспомогательных папок выше)
   * To be — UI + ТЗ для разработки
-* **Java** — Исходный код (Backend). Базовый проект: java-spring-microservices.
+* **Java** — Исходный код (Backend). Базовый проект: java-spring-microservices
 
 ---
 
