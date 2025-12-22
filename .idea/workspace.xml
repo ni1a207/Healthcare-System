@@ -4,16 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="91c55273-cbbb-4f6b-9c75-7a368cd0687b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/Docs/To be/123" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Docs/As is/Diagrams/Registration.puml" beforeDir="false" afterPath="$PROJECT_DIR$/Docs/As is/Diagrams/Registration.puml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Docs/As is/Services/AnalyticsService.md" beforeDir="false" afterPath="$PROJECT_DIR$/Docs/As is/Services/AnalyticsService.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Docs/As is/Services/ApiGateway.md" beforeDir="false" afterPath="$PROJECT_DIR$/Docs/As is/Services/ApiGateway.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Docs/As is/Services/AuthService.md" beforeDir="false" afterPath="$PROJECT_DIR$/Docs/As is/Services/AuthService.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Docs/As is/Services/PatientService.md" beforeDir="false" afterPath="$PROJECT_DIR$/Docs/As is/Services/PatientService.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Java/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/Java/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/REDME.md" beforeDir="false" afterPath="$PROJECT_DIR$/REDME.md" afterDir="false" />
-    </list>
+    <list default="true" id="91c55273-cbbb-4f6b-9c75-7a368cd0687b" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
