@@ -43,13 +43,13 @@ node_modules/
 Thumbs.db
 
 # JetBrains Rider
-.idea/
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/libraries/
-.idea/shelf/
-.idea/vcs.xml
+Java/.idea/
+Java/.idea/workspace.xml
+Java/.idea/tasks.xml
+Java/.idea/gradle.xml
+Java/.idea/libraries/
+Java/.idea/shelf/
+Java/.idea/vcs.xml
 *.iws
 
 # Temporary files
