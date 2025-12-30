@@ -1,0 +1,43 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+participant "frontend" as FE #FFF2CC
+boundary "api-gateway" as GW #FEF9E7
+participant "target-service" as TS #F4ECF7
+
+autonumber "<b>[0]</b>"
+
+group #LightCyan Проксирование к публичным ресурсам
+autonumber stop
+
+    FE -> GW: Запрос к общедоступным\nресурсам системы
+    activate FE #White
+    activate GW
+autonumber resume
+
+    GW -> GW: Определение маршрута:\nJwtValidation не требуется
+
+    GW -> TS: Проксирование запроса
+    activate TS
+
+    alt #MistyRose Ошибка соединения / таймаут
+        autonumber stop
+        TS --[#red]> GW: <font color="red">Error</font>
+        GW --[#red]> FE: <font color="red">500 INTERNAL SERVER ERROR</font>
+        autonumber resume
+    else #LightCyan Успешный ответ
+        TS --> GW: Ответ от целевого сервиса
+        deactivate TS
+
+        GW --> FE: Проксирование ответа клиенту
+        deactivate GW
+    end
+autonumber stop
+
+    FE -> FE: Обработка данных
+end
+    deactivate FE
+
+@enduml

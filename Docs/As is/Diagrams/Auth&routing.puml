@@ -1,0 +1,38 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+participant "frontend" as FE #FFF2CC
+boundary "api-gateway" as GW #FEF9E7
+participant "auth-service" as Auth #EBF5FB
+participant "target-service" as TS #F4ECF7
+
+autonumber "<b>0</b>"
+
+group #LightCyan Авторизация и маршрутизация
+    FE -> GW: Запрос к защищенному ресурсу
+    activate FE #White
+    activate GW
+
+    GW -> GW: Поиск JwtValidation в application.yml
+
+    GW -> Auth: GET /api/auth/validate
+    activate Auth
+    Auth --> GW: 200 OK
+    deactivate Auth
+
+    GW -> TS: Проксирование запроса
+    activate TS
+    TS --> GW: Ответ от целевого сервиса
+    deactivate TS
+
+    GW --> FE: Ответ пользователю
+    deactivate GW
+
+    ' Теперь стрелка будет внутри линии жизни
+    FE -> FE: Обработка данных
+    end
+    deactivate FE
+
+@enduml

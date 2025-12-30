@@ -1,0 +1,43 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+boundary "API Consumer" as GW #FEF9E7
+participant "auth-service" as Auth #EBF5FB
+
+group #LightCyan Процесс валидации токена
+    GW -> Auth: **[1]** GET /validate
+    note right of GW
+    **Header**:
+    Authorization: Bearer <token>
+    end note
+    activate Auth
+
+    Auth -> Auth: **[2]** Проверка наличия и\nформата заголовка (Bearer)
+
+    alt #MistyRose Ошибка префикса/заголовка
+        Auth --[#red]> GW: <color:#red>401 UNAUTHORIZED</color>
+    else #LightCyan Заголовок корректен
+
+        group #F8F9F9 **[3]** Внутренняя валидация (JJWT)
+            Auth -> Auth: **[3.1]** Проверка структуры
+            Auth -> Auth: **[3.2]** Проверка подписи
+            Auth -> Auth: **[3.3]** Проверка срока действия
+        end
+
+        alt #MistyRose JwtException (шаг 3)
+            Auth --[#red]> GW: <color:#red>401 UNAUTHORIZED</color>
+        else #LightCyan Токен валиден
+            Auth --> GW: **[4]** 200 OK
+            deactivate Auth
+
+        end
+    end
+end
+
+
+group #WhiteSmoke Системные сбои
+    Auth --[#red]> GW: <color:#red>500 INTERNAL SERVER ERROR</color>
+end
+@enduml

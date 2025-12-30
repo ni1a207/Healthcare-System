@@ -1,0 +1,62 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+boundary "API Consumer" as AC #FEF9E7
+box "auth-service" #EBF5FB
+    participant "AuthController" as Ctrl
+    participant "AuthService" as Service
+    participant "BCrypt/JJWT" as Utils
+end box
+database "Database (auth_db)" as DB #EAFAF1
+
+group #LightCyan Процесс аутентификации
+    AC -> Ctrl: POST /login (JSON Body)
+    activate Ctrl
+
+    Ctrl -> Ctrl: **[1]** Десериализация JSON и валидация LoginRequestDTO
+
+    alt #MistyRose Ошибка валидации параметров
+        Ctrl --[#red]> AC: <color:#red>400 BAD REQUEST (Message)</color>
+    end
+
+    Ctrl -> Service: **[2]** login(LoginRequestDTO)
+    activate Service
+
+    Service -> DB: **[3]** findByEmail(email)
+    activate DB
+    DB --> Service: User Entity / null
+    deactivate DB
+
+    alt #MistyRose Пользователь не найден
+        Service --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+    else #LightCyan Запись найдена
+        Service -> Utils: **[4]** matches(password, hash)
+        activate Utils
+
+        alt #MistyRose Неверный пароль
+            Utils --> Service: false
+            Service --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+        else #LightGreen Успешная верификация
+            Utils --> Service: true
+
+            Service -> Utils: **[5]** generateToken(email, role)
+            Utils --> Service: JWT String
+            deactivate Utils
+
+            Service --> Ctrl: LoginResponseDTO (token)
+            deactivate Service
+
+            Ctrl -> Ctrl: **[6]** Сериализация LoginResponseDTO в JSON
+            Ctrl --> AC: **[6]** 200 OK (JSON Body)
+        end
+    end
+end
+
+deactivate Ctrl
+
+group #WhiteSmoke Системные сбои
+    Service --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+end
+@enduml

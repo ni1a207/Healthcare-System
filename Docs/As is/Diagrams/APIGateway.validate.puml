@@ -1,0 +1,125 @@
+@startuml
+
+skinparam Shadowing true
+
+skinparam RoundCorner 5
+
+skinparam MaxMessageSize 250
+
+
+
+' Настройка участников
+
+participant "frontend" as FE #FFF2CC
+
+boundary "api-gateway" as GW #FEF9E7
+
+participant "auth-service" as Auth #EBF5FB
+
+participant "target-service" as TS #F4ECF7
+
+
+
+autonumber "<b>[0]</b>"
+
+
+group #LightCyan Проксирование к защищенным ресурсам
+
+autonumber stop
+FE -> GW: Запрос к защищенному ресурсу
+
+activate FE #White
+
+activate GW
+
+
+autonumber resume
+GW -> GW: Поиск маршрута и фильтра JwtValidation в application.yml
+
+GW -> GW: Проверка Header \nAuthorization Bearer <token>
+
+
+
+' Блок 1: Проверка наличия токена
+
+alt #MistyRose Токен отсутствует / неверный префикс
+
+autonumber stop
+
+GW --[#red]> FE: <font color="red">401 UNAUTHORIZED</font>
+
+autonumber resume
+
+else #LightCyan Токен извлечен успешно (Bearer <token>)
+
+
+
+' Блок 2: Запрос к Auth Service
+
+GW -> Auth: GET /validate (WebClient)
+
+activate Auth
+
+alt #MistyRose Сервис недоступен / Ошибка сервера
+
+autonumber stop
+
+Auth --[#red]> GW: <font color="red">Error</font>
+
+GW --[#red]> FE: <font color="red">500 INTERNAL SERVER ERROR</font>
+
+autonumber resume
+
+else #MistyRose Невалидный токен
+
+autonumber stop
+
+Auth --[#red]> GW: <font color="red">401 UNAUTHORIZED</font>
+
+GW --[#red]> FE: <font color="red">401 UNAUTHORIZED</font>
+
+autonumber resume
+
+
+
+else #LightCyan Валидный токен
+
+Auth --> GW: 200 OK
+
+deactivate Auth
+
+
+
+' Блок 3: Проксирование
+
+GW -> TS: Проксирование запроса (Header Authorization)
+
+activate TS
+    alt #MistyRose Ошибка соединения / таймаут
+        autonumber stop
+        TS --[#red]> GW: <font color="red">Error</font>
+        GW --[#red]> FE: <font color="red">500 INTERNAL SERVER ERROR</font>
+        autonumber resume
+
+    else #LightCyan Успешный ответ
+TS --> GW: Ответ от целевого сервиса
+end
+deactivate TS
+
+GW --> FE: Проксирование ответа клиенту
+
+deactivate GW
+
+end
+
+end
+
+
+autonumber stop
+FE->FE: Обработка данных
+end
+
+
+
+
+@enduml

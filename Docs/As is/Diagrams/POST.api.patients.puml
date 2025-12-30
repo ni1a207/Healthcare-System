@@ -1,0 +1,87 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+' Настройка участников
+participant "frontend" as FE #FFF2CC
+boundary "api-gateway" as GW #FEF9E7
+participant "patient-service" as PS #F4ECF7
+database "patient_db" as DB #EBF5FB
+participant "billing-service" as BS #D5F5E3
+queue "kafka" as KF #FADBD8
+
+autonumber "<b>0</b>"
+
+group #LightCyan Алгоритм работы метода POST /api/v1/patients
+    FE -> GW: POST /api/v1/patients (JSON)
+    activate FE #White
+    activate GW
+
+    GW -> PS: Проксирование запроса
+    activate PS
+
+    ' Шаг 1-2: Валидация и парсинг
+    group #Ivory Валидация и парсинг данных (DTO)
+        PS -> PS: Валидация PatientRequestDTO (JSR-303)
+        alt #MistyRose Ошибка валидации (null, size, email format)
+            autonumber stop
+            PS --[#red]> FE: <font color="red">400 BAD REQUEST (Validation Error)</font>
+            autonumber resume
+        else #LightCyan Успешная валидация
+            PS -> PS: Парсинг dateOfBirth, registeredDate
+            alt #MistyRose Ошибка формата даты (не ISO_LOCAL_DATE)
+                autonumber stop
+                PS --[#red]> FE: <font color="red">500 INTERNAL SERVER ERROR</font>
+                autonumber resume
+            end
+        end
+    end
+
+    ' Шаг 3: Работа с БД
+    group #AliceBlue Работа с базой данных
+        PS -> DB: Проверка существования email
+        activate DB
+        alt #MistyRose Email найден
+            DB --> PS: email exists
+            autonumber stop
+            PS --[#red]> FE: <font color="red">400 BAD REQUEST (Email already exists)</font>
+            autonumber resume
+        else #LightCyan Email уникален
+            DB --> PS: not found
+            PS -> DB: Сохранение Patient (генерируется UUID)
+            DB --> PS: Patient saved
+        end
+        deactivate DB
+    end
+
+    ' Шаг 4-5: gRPC Billing
+    group #HoneyDew Интеграция с Billing Service (gRPC)
+        PS -> BS: gRPC: CreateBillingAccount(patientId, name, email)
+        activate BS
+        alt #MistyRose Ошибка сервиса / Сетевой сбой
+            BS --[#red]> PS: gRPC Error / Unavailable
+            autonumber stop
+            PS --[#red]> FE: <font color="red">500 INTERNAL SERVER ERROR</font>
+            autonumber resume
+        else #LightCyan Успешное создание счета
+            BS --> PS: BillingResponse (accountId: "12345", status: "ACTIVE")
+            deactivate BS
+        end
+    end
+
+    ' Шаг 6: Kafka
+    group #GhostWhite Асинхронное уведомление
+        PS -> KF: Kafka: sendEvent(PatientEvent: PATIENT_CREATED)
+        note right: Ошибка отправки только логируется и не прерывает ответ
+    end
+
+    ' Шаг 7: Ответ
+    PS --> GW: 200 OK (PatientResponseDTO)
+    deactivate PS
+    GW --> FE: Проксирование ответа
+    deactivate GW
+end
+deactivate FE
+
+@enduml

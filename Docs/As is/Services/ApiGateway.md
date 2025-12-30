@@ -5,18 +5,24 @@
 ## Архитектурная схема (C4 Container)
 ![APIGatewayC4.svg](..%2FDiagrams%2FAPIGatewayC4.svg)
 
-*Примечание: Шлюз является посредником между внешними клиентами и внутренними микросервисами.*
-
 ## Стек технологий
 * **Runtime**: Java 21 (OpenJDK).
-* **Framework**: Spring Boot 3.4.1 (Spring Cloud Gateway).
+* **Framework**: Spring Boot 3.4.1 (Spring Cloud Gateway 2024.0.0).
 * **Build Tool**: Maven 3.9.9.
 * **Infrastructure**: Docker.
 * **Logging**: SLF4J.
 
 ## Безопасность и контроль доступа
-Шлюз делегирует проверку подлинности специализированному сервису авторизации: кастомный фильтр JwtValidation (класс JwtValidationGatewayFilterFactory) извлекает токен из заголовка Authorization и выполняет проверочный запрос GET /validate к auth-service.
-При получении ответа 200 OK шлюз пропускает запрос дальше.
+API Gateway выступает единым прокси-слоем системы, обеспечивающим аутентификацию, авторизацию и маршрутизацию запросов к публичным и защищенным ресурсам. 
+### Техническая реализация фильтров
+Логика валидации запросов реализована на уровне Java-кода. Spring Cloud Gateway связывает конфигурацию в `application.yml` с программными фабриками по их названию:
+
+* **Класс-обработчик**: `JwtValidationGatewayFilterFactory`
+* **Название в конфиге**: `JwtValidation`
+* **Логика**: Наследуется от `AbstractGatewayFilterFactory`. Перехватывает входящий `ServerWebExchange`, извлекает JWT и выполняет реактивный запрос к `Auth Service` через `WebClient`. При возникновении ошибок валидации выбрасывает кастомное исключение `JwtValidationException`, которое транслируется в HTTP 401.
+
+
+Подробное описание этапов обработки запроса, включая коды ответов и условия валидации, приведено в разделе: ["Алгоритмы работы API Gateway"](..%2FAPI%2FAPIGateway.md).
 ## Переменные окружения
 
 | Переменная | Значение                    | Описание                                             |
@@ -32,16 +38,22 @@
 | **Internal Port** | 4004        | Входящий HTTP порт (server.port) |
 | **Exposed Port** | 4004        | Порт, доступный извне (localhost)
 ## Маршрутизация
+
 Шлюз использует статическую маршрутизацию. Имена хостов должны быть разрешимы на уровне сетевой инфраструктуры (Docker DNS).
 
-| Направление         | Префикс пути       | Целевой URI                      | Фильтры                                      |
-|:--------------------|:-------------------|:---------------------------------|:---------------------------------------------|
-| **Auth Service**    | /api/auth/**       | http://host.docker.internal:4005 | StripPrefix=1                                |
-| **Patient Service** | /api/patient/**    | http://host.docker.internal:4000 | StripPrefix=1, JwtValidation                 |
-| **Auth Docs**       | /api-docs/auth     |http://host.docker.internal:4005 | RewritePath=/api-docs/auth, /v3/api-docs     |
-| **Patient Docs**    | /api-docs/patients | http://host.docker.internal:4000 | RewritePath=/api-docs/patients, /v3/api-docs |
-
+| Направление | Префикс пути | Целевой URI | Фильтры |
+| :--- | :--- | :--- | :--- |
+| **Auth Service** | `/auth/**` | `http://auth-service:4005` | `StripPrefix=1` |
+| **Patient Service** | `/api/patients/**` | `http://patient-service:4000` | `StripPrefix=1`, `JwtValidation` |
+| **Auth Docs** | `/api-docs/auth` | `http://auth-service:4005` | `RewritePath=/api-docs/auth, /v3/api-docs` |
+| **Patient Docs** | `/api-docs/patients` | `http://patient-service:4000` | `RewritePath=/api-docs/patients, /v3/api-docs` |
 
 ### Особенности конфигурации:
+
 1. **StripPrefix=1**: Удаляет первый сегмент пути перед отправкой запроса конечному микросервису.
-2. **JwtValidation**: Применяется только к бизнес-логике (/api/patients/**). Запросы на авторизацию и получение документации проходят без этого фильтра.
+
+
+2. **JwtValidation**: Кастомный фильтр, выполняющий проверку токена через `Auth Service`. Применяется только к бизнес-логике (`/api/patients/**`). Запросы на авторизацию и получение документации проходят без этого фильтра.
+ 
+
+3. **RewritePath**: Используется для проксирования запросов к OpenAPI спецификациям микросервисов на стандартный эндпоинт `/v3/api-docs`.
