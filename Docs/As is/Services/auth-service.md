@@ -1,10 +1,11 @@
-# Auth Service
+# auth-service
 
 ## Назначение
 Сервис аутентификации и авторизации. Выполняет проверку учетных данных пользователей, генерацию подписанных JWT-токенов и верификацию токенов для внешних компонентов системы (api-gateway).
 
-## Архитектурная схема (C4 Container)
-![AuthServiceC4.svg](../Diagrams/AuthServiceC4.svg)
+## Архитектурная схема (C4 Component)
+
+![AuthServiceC4.svg](..%2FDiagrams%2FAuthServiceC4.svg)
 
 ## Стек технологий
 * **Runtime**: Java 21 (OpenJDK).

@@ -125,7 +125,7 @@
 | Сервис                                            | БД                                        | API                        | Описание                             |
 |:--------------------------------------------------|:------------------------------------------|:---------------------------|:-------------------------------------|
 | [API Gateway](Services/ApiGateway.md)             | -                                         | REST                       | Точка входа, маршрутизация запросов  |
-| [Auth Service](Services/AuthService.md)           | PostgreSQL<br/>[auth_db](DB%2Fauth_db.md) | REST                       | Управление пользователями и сессиями |
+| [Auth Service](Services/auth-service)           | PostgreSQL<br/>[auth_db](DB%2Fauth_db.md) | REST                       | Управление пользователями и сессиями |
 | [Patient Service](Services/PatientService.md)     | PostgreSQL <br/>[patient_db](DB%2Fpatient_db.md)                | REST, gRPC, Kafka producer | Мастер-система для данных пациентов  |
 | [Billing Service](Services/BillingService.md)     | -                                         | gRPC, REST                 | Финансовый модуль                    |
 | [Analytics Service](Services/AnalyticsService.md) | -                                         | Kafka  consumer            | Сбор статистики                      |
@@ -136,7 +136,7 @@
 
 | №     | Бизнес-функция                             | Релиз | Связанные сервисы                                                                                | Базы данных    | API                                                      |
 |:------|:-------------------------------------------| :--- |:-------------------------------------------------------------------------------------------------|:---------------|:---------------------------------------------------------|
-| **1** | Авторизация пользователя                   | **MVP** | [API Gateway](Services/ApiGateway.md)<br/>[Auth Service](Services/AuthService.md)                     | [auth_db]()    | [POST /api/auth/login]() <br/>[GET /api/auth/validate]() |
+| **1** | Авторизация пользователя                   | **MVP** | [API Gateway](Services/ApiGateway.md)<br/>[Auth Service](Services/auth-service)                     | [auth_db]()    | [POST /api/auth/login]() <br/>[GET /api/auth/validate]() |
 | **2** | Регистрация нового пациента                | **MVP** | [Patient Service](Services/PatientService.md)<br/> [Billing Service](Services/BillingService.md) | [patient_db]() | [POST /api/patients]()<br/> [gRPC: createBilling]()      |
 | **3** | Просмотр всех зарегистрированных пациентов | **MVP** | [Patient Service](Services/PatientService.md)                                                    | [patient_db]() | [GET /api/patients/]()                                   |
 | **4** | Изменение данных пациента                  | **MVP** | [Patient Service](Services/PatientService.md)                                                    | [patient_db]() | [PUT /api/patients/{id}]()                               |

@@ -1,0 +1,57 @@
+@startuml
+!define DARK_BLUE #2E86C1
+!define LIGHT_BLUE #EBF5FB
+!define COMPONENT_COLOR #D6EAF8
+
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam BoxPadding 10
+
+title Компонентная диаграмма Auth Service (Уровень 3)
+
+' Внешние системы
+node "Database" as DB #EAFAF1 {
+    database "PostgreSQL (auth_db)" as postgres #D5F5E3
+}
+
+node "API Gateway" as GW #FEF9E7 {
+    [Spring Cloud Gateway] as gateway
+}
+
+' Граница сервиса с контрастным боксом
+package "Auth Service" as auth_box #2E86C1 {
+    skinparam package {
+        FontColor White
+        BorderColor #1B4F72
+    }
+
+    [AuthController] as ctrl #White
+    [AuthService] as srv #White
+    [UserService] as usrv #White
+    [UserRepository] as repo #White
+
+    node "External Libs" as libs #1B4F72 {
+        [BCrypt] as bcrypt #F4F6F7
+        [JJWT] as jjwt #F4F6F7
+    }
+}
+
+' Связи
+gateway -[#blue]-> ctrl : POST /login\nGET /validate (HTTP/JSON)
+ctrl --> srv : Вызывает методы
+srv --> usrv : Запрашивает данные
+usrv --> repo : Использует JPA
+repo -[#green]-> postgres : SQL (JDBC)
+
+srv -[#red]-> bcrypt : Проверка пароля
+srv -[#red]-> jjwt : Генерация/Валидация JWT
+
+legend right
+  |= Цвет |= Описание |
+  | <#2E86C1> | Контур сервиса |
+  | <#White> | Внутренний компонент |
+  | <#F4F6F7> | Библиотека |
+  | <#EAFAF1> | Внешняя БД |
+endlegend
+
+@enduml
