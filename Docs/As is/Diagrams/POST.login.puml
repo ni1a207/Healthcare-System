@@ -4,59 +4,71 @@ skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
 boundary "API Consumer" as AC #FEF9E7
-box "auth-service" #EBF5FB
+
+box "auth-service" #5D6D7E
     participant "AuthController" as Ctrl
     participant "AuthService" as Service
+    participant "UserService" as USrv
     participant "BCrypt/JJWT" as Utils
 end box
+
 database "Database (auth_db)" as DB #EAFAF1
 
-group #LightCyan Процесс аутентификации
-    AC -> Ctrl: POST /login (JSON Body)
+group #LightCyan Процесс аутентификации (POST /login)
+    AC -> Ctrl: POST /login (LoginRequestDTO)
     activate Ctrl
 
-    Ctrl -> Ctrl: **[1]** Десериализация JSON и валидация LoginRequestDTO
+    Ctrl -> Ctrl: **[1]** Валидация DTO (@Valid)
 
-    alt #MistyRose Ошибка валидации параметров
-        Ctrl --[#red]> AC: <color:#red>400 BAD REQUEST (Message)</color>
-    end
+    alt #MistyRose Входные параметры невалидны
+        Ctrl --[#red]> AC: <color:#red>400 BAD REQUEST</color>
+    else #LightCyan Входные параметры валидны
 
-    Ctrl -> Service: **[2]** login(LoginRequestDTO)
-    activate Service
+        Ctrl -> Service: **[2]** authenticate(loginRequestDTO)
+        activate Service
 
-    Service -> DB: **[3]** findByEmail(email)
-    activate DB
-    DB --> Service: User Entity / null
-    deactivate DB
+        Service -> USrv: **[3]** findByEmail(email)
+        activate USrv
+        USrv -> DB: SELECT FROM users
+        activate DB
+        DB --> USrv: user / null
+        deactivate DB
+        USrv --> Service: Optional<User>
+        deactivate USrv
 
-    alt #MistyRose Пользователь не найден
-        Service --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
-    else #LightCyan Запись найдена
-        Service -> Utils: **[4]** matches(password, hash)
-        activate Utils
+        alt #MistyRose Пользователь не найден
+            Service --[#red]>  Ctrl: <color:#red>Optional.empty()</color>
+            Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+        else #LightCyan Запись найдена
 
-        alt #MistyRose Неверный пароль
-            Utils --> Service: false
-            Service --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
-        else #LightGreen Успешная верификация
-            Utils --> Service: true
+            Service -> Utils: **[4]** matches(raw, hash)
+            activate Utils
 
-            Service -> Utils: **[5]** generateToken(email, role)
-            Utils --> Service: JWT String
-            deactivate Utils
+            alt #MistyRose Пароль и хэш не совпали
+                Utils --[#red]>  Service: <color:#red>false</color>
+                Service --[#red]>  Ctrl: <color:#red>Optional.empty()</color>
+                Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+            else #LightGreen Пароль и хэш совпали
+                Utils --> Service: true
 
-            Service --> Ctrl: LoginResponseDTO (token)
-            deactivate Service
+                Service -> Utils: **[5]** generateToken(email, role)
+                Utils --> Service: JWT String
+                deactivate Utils
 
-            Ctrl -> Ctrl: **[6]** Сериализация LoginResponseDTO в JSON
-            Ctrl --> AC: **[6]** 200 OK (JSON Body)
+                Service --> Ctrl: Optional<String> (token)
+                deactivate Service
+
+                Ctrl -> Ctrl: **[6]** Маппинг в LoginResponseDTO
+                Ctrl --> AC: **[7]** 200 OK (JSON Body)
+            end
         end
     end
 end
 
-deactivate Ctrl
-
 group #WhiteSmoke Системные сбои
-    Service --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+    Service --[#red]> Ctrl: <color:#red>Exception (Critical Error)</color>
+    Ctrl --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
 end
+
+deactivate Ctrl
 @enduml

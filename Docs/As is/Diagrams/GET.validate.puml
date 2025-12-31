@@ -3,41 +3,56 @@ skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
-boundary "API Consumer" as GW #FEF9E7
-participant "auth-service" as Auth #EBF5FB
+boundary "API Consumer" as AC #FEF9E7
 
-group #LightCyan Процесс валидации токена
-    GW -> Auth: **[1]** GET /validate
-    note right of GW
-    **Header**:
-    Authorization: Bearer <token>
-    end note
-    activate Auth
+box "auth-service" #5D6D7E
+    participant "AuthController" as Ctrl
+    participant "AuthService" as Service
+    participant "JJWT (Library)" as Utils
+end box
 
-    Auth -> Auth: **[2]** Проверка наличия и\nформата заголовка (Bearer)
+group #LightCyan Процесс валидации токена (GET /validate)
+    AC -> Ctrl: GET /validate (Authorization Header)
+    activate Ctrl
 
-    alt #MistyRose Ошибка префикса/заголовка
-        Auth --[#red]> GW: <color:#red>401 UNAUTHORIZED</color>
+    Ctrl -> Ctrl: **[1]** Проверка наличия и формата\nзаголовка (Bearer)
+
+    alt #MistyRose Заголовок отсутствует или неверный префикс
+        Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
     else #LightCyan Заголовок корректен
 
-        group #F8F9F9 **[3]** Внутренняя валидация (JJWT)
-            Auth -> Auth: **[3.1]** Проверка структуры
-            Auth -> Auth: **[3.2]** Проверка подписи
-            Auth -> Auth: **[3.3]** Проверка срока действия
-        end
+        Ctrl -> Service: **[2]** validateToken(JWT String)
+        activate Service
 
-        alt #MistyRose JwtException (шаг 3)
-            Auth --[#red]> GW: <color:#red>401 UNAUTHORIZED</color>
-        else #LightCyan Токен валиден
-            Auth --> GW: **[4]** 200 OK
-            deactivate Auth
+        Service -> Utils: **[3]** Вызов библиотеки (try)
+        activate Utils
 
+        note right of Utils
+          **[3.1]** Проверка структуры
+          **[3.2]** Проверка подписи (Secret Key)
+          **[3.3]** Проверка срока действия (exp)
+        end note
+
+        alt #MistyRose Выброшено JwtException
+            Utils --[#red]> Service: <color:#red>throw JwtException</color>
+            Service --[#red]> Ctrl: <color:#red>false (catch)</color>
+            Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+        else #LightGreen Валидация успешна
+            Utils --> Service: [void/success]
+            deactivate Utils
+
+            Service --> Ctrl: true
+            deactivate Service
+
+            Ctrl --> AC: **[3]** 200 OK
         end
     end
 end
 
-
 group #WhiteSmoke Системные сбои
-    Auth --[#red]> GW: <color:#red>500 INTERNAL SERVER ERROR</color>
+    Service --[#red]> Ctrl: <color:#red>Exception (Critical Error)</color>
+    Ctrl --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
 end
+
+deactivate Ctrl
 @enduml
