@@ -2,42 +2,45 @@
 skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
+skinparam Style strictuml
 
-participant "frontend" as FE #FFF2CC
-boundary "api-gateway" as GW #FEF9E7
+participant "Single Page Application" as SPA #LightBlue
+
+box "api-gateway" #FEF9E7
+    participant "Route Configuration" as RC #D5E8D4
+end box
+
+' Теперь сервис находится за границей гейтвея
 participant "target-service" as TS #F4ECF7
 
 autonumber "<b>[0]</b>"
-
-group #LightCyan Проксирование к публичным ресурсам
 autonumber stop
 
-    FE -> GW: Запрос к общедоступным\nресурсам системы
-    activate FE #White
-    activate GW
+group #LightCyan Проксирование публичного запроса
+    SPA -> RC: HTTP Request (порт 4004)
+    activate SPA
+    activate RC
+
 autonumber resume
+    RC -> RC: Поиск маршрута в YAML:\nJwtValidation filter NOT found
 
-    GW -> GW: Определение маршрута:\nJwtValidation не требуется
-
-    GW -> TS: Проксирование запроса
+    RC -> TS: Proxy Request
     activate TS
 
-    alt #MistyRose Ошибка соединения / таймаут
-        autonumber stop
-        TS --[#red]> GW: <font color="red">Error</font>
-        GW --[#red]> FE: <font color="red">500 INTERNAL SERVER ERROR</font>
+autonumber stop
+    alt #MistyRose Целевой сервис недоступен
+        TS --[#red]> RC: <color:#red>Connection Refused / Timeout </color>
+        RC  --[#red]> SPA: <color:#red>500 INTERNAL SERVER ERROR</color>
+
+    else #LightGreen Ответ на запрос
         autonumber resume
-    else #LightCyan Успешный ответ
-        TS --> GW: Ответ от целевого сервиса
+        TS --> RC: HTTP Response
         deactivate TS
 
-        GW --> FE: Проксирование ответа клиенту
-        deactivate GW
+        RC --> SPA: Proxy Response
     end
-autonumber stop
 
-    FE -> FE: Обработка данных
+    deactivate RC
+    deactivate SPA
 end
-    deactivate FE
-
 @enduml

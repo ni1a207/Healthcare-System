@@ -2,21 +2,21 @@
 
 ## Назначение
 Центральный микросервис системы, отвечающий за управление жизненным циклом данных пациентов (CRUD) и оркестрацию связанных бизнес-процессов: создание финансовых аккаунтов через gRPC и уведомление смежных систем через Kafka.
-## Архитектурная схема (C4 Container)
-![PatientServiceC4.svg](..%2FDiagrams%2FPatientServiceC4.svg)
+## Архитектурная схема (C4 Component)
 
+![PatientServiceC4.svg](..%2FDiagrams%2FPatientServiceC4.svg)
 *Примечание: На схеме отображены только прямые интеграции сервиса.*
 ## Стек технологий
 
 * **Runtime**: Java 21 (Eclipse Temurin / OpenJDK).
-* **Framework**: Spring Boot 3.4.1. (Spring Data JPA, Spring Web).
+* **Framework**: Spring Boot 3.4.0. (Spring Data JPA, Spring Web).
 * **Database**: PostgreSQL (runtime), H2 (In-memory/Test).
 * **Messaging**: Spring Kafka 3.3.0.
 * **Protocols**: REST (HTTP), gRPC (Client).
 * **Serialization**: Protobuf 4.29.1 (для gRPC и Kafka).
 * **Build Tool**: Maven 3.9.9.
 * **Infrastructure**: Docker.
-* **Logging**: SLF4J (Level: INFO).
+* **Logging**: SLF4J/Logback (Level: INFO).
   
  *В коде присутствует закомментированная конфигурация для H2 (In-memory), которая может быть активирована для локальных тестов.*
 
@@ -34,15 +34,15 @@
 | **email** | Да | String    | Unique, Not Null | Электронная почта                      | ivan@mail.com |
 | **address** | Да | String    | Not Null | Адрес  проживания                      | г. Москва, ул. Ленина, д. 1 |
 | **date_of_birth** | Да | LocalDate | Not Null | Дата рождения                          | 1990-05-15 |
-| **registered_date** | Да | LocalDate | Not Null | Дата регистрации (только при создании) | 2025-12-20 |а рождения пациента | `1990-05-15` |
+| **registered_date** | Да | LocalDate | Not Null | Дата регистрации (только при создании) | 2025-12-20 |
 ## API  
 ### REST 
-| Метод  | Полный путь        | Описание                                           |
-|:-------|:-------------------|:---------------------------------------------------| 
-| POST   | /api/patients      | Создание нового  пациента в системе                | 
-| GET    | /api/patients      | Получение списка всех зарегистрированных пациентов | 
-| PUT    | /api/patients/{id} | Изменение данных пациента в системе                | 
-| DELETE | /api/patients/{id} | Удаление пациента из системы                       | 
+| Метод и путь                                      | Описание                                           |
+|:--------------------------------------------------|:---------------------------------------------------| 
+| [POST /patients](..%2FAPI%2FPOST.api.patients.md) | Создание нового  пациента в системе                | 
+| GET /patients                                     | Получение списка всех зарегистрированных пациентов | 
+| PUT                  /patients/{id}               | Изменение данных пациента в системе                | 
+| DELETE               /patients/{id}               | Удаление пациента из системы                       | 
 
 
 ### gRPC  
@@ -55,9 +55,9 @@
 * **Topic**: patient
 * **Event**: PatientEvent (Protobuf)
 * **Role**: Producer
-* **Event** Type: PATIENT_CREATED
-* **Key/Value Deserializer**: StringDeserializer / ByteArrayDeserializer
-
+* **Event Type**: PATIENT_CREATED
+* **Key-serializer**: StringSerializer 
+* **Value-serializer**: ByteArraySerializer
 ## Переменные окружения
 ### Application (patient-service)
 | Переменная | Значение                                     | Описание                                    |
@@ -70,7 +70,6 @@
 | **BILLING_SERVICE_ADDRESS** | billing-service                              | Хост gRPC-Billing Service                   |
 | **BILLING_SERVICE_GRPC_PORT** | 9001                                         | Порт gRPC-сервиса биллинга                  |
 | **SPRING_JPA_HIBERNATE_DDL_AUTO** | update                                       | Автоматическое обновление схемы базы данных |
-| **SPRING_SQL_INIT_MODE** | always                                       | Выполнение data.sql при каждом запуске      |
 | **JAVA_TOOL_OPTIONS** | -agentlib:jdwp=...address=*:5005             | Параметры для удаленной отладки (Debug)     |
 ### Database (patient-service-db)
 | Переменная | Значение   | Описание |
@@ -86,12 +85,12 @@
 | **Service Name** | patient-service         | Имя хоста в Docker-сети |
 | **Internal Port** | 4000                    | Входящий HTTP порт (server.port) |
 | **Debug Port** | 5005                    | Порт для подключения Java Debugger |
-| **Target gRPC Host** | billing-service:9001   | Адрес назначения для gRPC вызовов |
+| **Target gRPC Host** | billing-service:9001    | Адрес назначения для gRPC вызовов |
 | **Target DB Host** | patient-service-db:5432 | Адрес подключения к PostgreSQL |
-| **Target Kafka Host** | kafka:9094              | Адрес подключения к брокеру Kafka |
+| **Target Kafka Host** | kafka:9092              | Адрес подключения к брокеру Kafka |
 
 ## Swagger
-| Интерфейс | URL                                   | Описание |
-| :--- |:--------------------------------------| :--- |
-| **Swagger UI** | http://localhost:4000/swagger-ui.html | Локальный UI документации |
-| **OpenAPI JSON** | http://localhost:4000/v3/api-docs     | Спецификация API в формате JSON |
+| Интерфейс | URL              | Описание |
+| :--- |:-----------------| :--- |
+| **Swagger UI** | /swagger-ui.html | Локальный UI документации |
+| **OpenAPI JSON** | /v3/api-docs     | Спецификация API в формате JSON |
