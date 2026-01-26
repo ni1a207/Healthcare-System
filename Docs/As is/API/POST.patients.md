@@ -19,7 +19,7 @@ Header:
 |:------|:-----------|:---------------|:------------------------------------------------|:-----------------|:---------------------|
 |Content-Type|string|да| Тип передаваемого контента                      | application/json | -                    |
 | Authorization | string | да | Токен доступа (на уровне сервиса нет валидации) | Bearer <token> | - |
-Body:
+Body (JSON):
 
 | Параметр | Тип данных | Обязательность | Описание                                             | Значение/пример   | Маппинг с patient_db    |
 |:---------|:-----------|:---------------|:-----------------------------------------------------|:------------------|:------------------------|
@@ -32,7 +32,7 @@ Body:
 
 <details>
 <summary><b><font color="#2196F3">Выходные параметры</font></b></summary>
-Body:
+Body (JSON):
 
 | Параметр | Тип данных | Описание | Значение/пример | Маппинг с patient_db |
 |:---|:---|:---|:---|:---|
@@ -78,7 +78,16 @@ Response body (json):
 ---
 ## Алгоритм работы
 
-1. `Patient Service`получает через `API  Gateway` входящий запрос `POST  /api/patients`. Сервис валидирует входные параметры:
+1. `patient-service` через `DispatcherServlet` принимает входящий HTTP-запрос `POST /patients`.
+
+
+2. `DispatcherServlet` передает входящий `JSON` в библиотеку `Jackson` для выполнения десериализации.
+
+
+3. `Jackson` десериализует тело запроса из `JSON` в объект `PatientRequestDTO` и возвращает в `DispatcherServlet`. Если формат полей типа `LocalDate` (`dateOfBirth`, `registeredDate`) не соответствует `ISO_LOCAL_DATE (YYYY-MM-DD)`, `Jackson` выбрасывает `InvalidFormatException`. `GlobalExceptionHandler` перехватывает ошибку и возвращает HTTP статус-код `400 BAD REQUEST`.
+
+
+4. `DispatcherServlet` валидирует параметры объекта `PatientRequestDTO`:
     <details style="font-weight: normal;">
       <summary style="cursor: pointer; color: #2196F3; font-weight: normal;">
         Валидация параметров
@@ -86,7 +95,7 @@ Response body (json):
       <div style="font-weight: normal;">
 
    | Параметр | Результат |
-       |:---|:---|
+          |:---|:---|
    | name | Ошибка валидации: параметр пустой или передан как null.<br>`400 BAD REQUEST message: "Name is required"`<br><br>Ошибка валидации: длина имени превышает 100 символов.<br>`400 BAD REQUEST message: "Name cannot exceed 100 characters"` |
    | email | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Email is required"`<br><br>Ошибка валидации: строка не соответствует формату адреса электронной почты.<br>`400 BAD REQUEST message: "Email should be valid"` |
    | address | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Address is required"` |
@@ -96,30 +105,54 @@ Response body (json):
       </div>
     </details>
 
-
-2. `Patient Service` парсит поля `dateOfBirth` и `registeredDate` в объекты `LocalDate`, если формат даты в строке не соответствует `ISO_LOCAL_DATE (YYYY-MM-DD)` - сервис возвращет HTTP статус код `500 INTERNAL SERVER ERROR` .
-
-
-3. `Patient Service` проверяет, существует ли уже такой `email` в `patient_db`. Если `email` найден - сервис возвращает  HTTP статус код `400 BAD REQUEST massage: "Email address already exists"`.  Если `email` не найден, геннерируется `UUID` и данные, переданные во входных параметрах, записываются в `patient_db` таблицу `patient`.
+   В случае ошибки валидации `GlobalExceptionHandler` перехватывает ошибку и отправляет ответ клиенту.
 
 
-4. `Patient Service` вызывает gRPC метод в `Billing Service BillingServiceGrpcClient.createBillingAccount`:
-
-   4.1. Формируется `BillingRequest` `{"patientId": "123e4567...", "name": "John Doe", "email": "john.doe@example.com"}`(patientId - сгенерированный UUID на шаге 3)
-
-   4.2. Выполняется блокирующий вызов через [blockingStub.createBillingAccount](gRPC.createBilling.md). Если `Billing Service` недоступен или вернул ошибку gRPC - сервис возвращает HTTP сатус код `500 INTERNAL SERVER ERROR`.
+5. `DispatcherServlet` при успешной валидации вызывает метод `createPatient(patientRequestDTO)` в `PatientController`, передавая объект в качестве аргумента.
 
 
-5. `Patient Service` получает ответ `Status: OK (GRPC_STATUS_OK) Response body: {"accountId": "12345", "status": "ACTIVE"}` от `Billing Service`.
+6. `PatientController` вызывает метод `createPatient(patientRequestDTO patientRequestDTO)` в `PatientService`.
 
 
-6. `Patient Service` отправляет событие в `Kafka`, вызывается [KafkaProducer.sendEvent(patient)](Kafka.PatientEvent%20.producer.md).
-
-   6.1. Создается Protobuf-сообщение `PatientEvent` с типом `PATIENT_CREATED`.
-
-   6.2.Выполняется отправка в топик `patient`.
+7. `PatientService` выполняет проверку уникальности `email`, вызывая `patientRepository.existsByEmail(patientRequestDTO.getEmail())`. Это инициирует SQL-запрос в базу данных `patient_db`, в таблицу `patient` : `SELECT count(*) FROM patient WHERE email = ?`. Если такой `email` уже существует в БД, выбрасывается исключение `EmailAlreadyExistsException`, которое перехватывает `GlobalExceptionHandler`, клиенту возвращается HTTP статус-код `400 BAD REQUEST, message: "Email address already exists"`.
 
 
-7. `Patient Service` возвращает ответ `200 OK + JSON` через `API Gateway` на клиент. - никаких ошибок нет? 
+8. `PatientMapper` мапит данные из `PatientRequestDTO` в сущность `Patient`. Генерируется уникальный идентификатор записи `UUID`.
 
-![POST.api.patients.svg](..%2FDiagrams%2FPOST.api.patients.svg)
+
+9. `PatientRepository` делает запись в базу данных `patient_db` в таблицу `patient`. `Hibernate` запрашивает соединение у пула `HikariCP` и выполняет SQL-запрос `INSERT INTO patient (id, name, email, address, date_of_birth, registered_date) VALUES (?, ?, ?, ?, ?, ?);`. 
+
+
+10. `PatientService` формирует gRPC-сообщение `BillingRequest` и вызывает `BillingServiceGrpcClient`.
+
+
+11. `BillingServiceGrpcClient` выполняет блокирующий вызов метода `createBillingAccount` в `Billing Service`, передаются параметры `patientId` (UUID), `name` и `email`. 
+ 
+ 
+12. `Billing Service` обрабатывает запрос, возвращает объект с данными открытого счета (в коде данные захардкожены, всегда будет возвращаться объект с параметрами: {
+    "patientId": "12333",
+    "name" : "John Doe",
+    "email" : "john.doe@example.com"
+    })
+Если `Billing Service` недоступен или вернул ошибку выбрасывается исключение `StatusRuntimeException`,  `GlobalExceptionHandler` перехватывает ошибку и возвращает клиенту HTTP статус-код `500 INTERNAL SERVER ERROR`. В методе `createPatient` нет блока `try-catch` и аннотации `@Transactional`, выполнение запроса прерывается.
+
+**Важно!** Запись в базе данных `patient_db` на шаге 9 уже зафиксирована (COMMIT). В системе возникает рассинхрон: пациент в БД создан, но финансовый счет в `BillingSrvice` отсутствует.
+
+12. При успешном ответе от `Billing Service` (статус OK), `PatientService` вызывает `KafkaProducer.sendEvent(newPatient)`.
+
+
+13. `KafkaProducer` сериализует Protobuf-сообщение `PatientEvent` (тип PATIENT_CREATED) и отправляет его в топик `patient`. Если `Kafka` недоступен, выбрасывается исключение, `GlobalExceptionHandler` возвращает клиенту HTTP статус-код `500 INTERNAL SERVER ERROR`.
+
+
+14. `PatientMapper` мапит сохраненную сущность в объект `PatientResponseDTO`.
+
+
+15. `PatientController` оборачивает `DTO` в `ResponseEntity.ok()` и возвращает его в `DispatcherServlet`.
+
+
+16. `Jackson` выполняет сериализацию объекта в `JSON`.
+
+
+17. `DispatcherServlet` записывает `JSON` в тело ответа и отправляет его клиенту со статусом `200 OK`.
+
+![POST.patients.svg](..%2FDiagrams%2FPOST.patients.svg)

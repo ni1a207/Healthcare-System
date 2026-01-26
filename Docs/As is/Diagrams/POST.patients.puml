@@ -1,0 +1,135 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+boundary "API Consumer" as AC #FEF9E7
+
+box "patient-service" #5D6D7E
+    participant "DispatcherServlet" as DS #White
+    participant "Jackson" as Jackson #White
+    participant "PatientController" as Ctrl #White
+    participant "PatientService" as Service #White
+    participant "PatientRepository" as Repo #White
+    participant "PatientMapper" as Mapper #White
+    participant "GlobalExceptionHandler" as GEH #LightSalmon
+    participant "BillingGrpcClient" as Grpc #White
+    participant "KafkaProducer" as Kafka #White
+end box
+
+database "patient_db" as DB #LightBlue
+participant "Billing-Service" as BS #LightGreen
+queue "Kafka" as KF #FADBD8
+
+group #LightCyan Процесс создания пациента (POST /patients)
+    AC -> DS: **[1]** POST /patients (JSON)
+    activate DS
+
+    DS -> Jackson: **[2]** Десериализация (JSON -> DTO)
+    activate Jackson
+    alt #MistyRose Ошибка формата (Jackson)
+        Jackson --[#red]> DS: <color:#red>InvalidFormatException</color>
+        DS --[#red]> AC: <color:#red>400 BAD REQUEST</color>
+    end
+    Jackson --> DS: **[3]** DTO
+    deactivate Jackson
+
+    DS -> DS: **[4]** Валидация параметров PatientRequestDTO
+    alt #MistyRose Ошибка валидации
+        DS -> GEH: <color:#red>MethodArgumentNotValidException</color>
+        activate GEH
+        GEH --[#red]> AC: <color:#red>400 BAD REQUEST + message</color>
+        deactivate GEH
+    end
+
+    DS -> Ctrl: **[5]** createPatient(patientRequestDTO)
+    activate Ctrl
+
+    Ctrl -> Service: **[6]** createPatient(patientRequestDTO)
+    activate Service
+
+    Service -> Repo: **[7]** existsByEmail(patientRequestDTO.getEmail())
+    activate Repo
+    Repo -> DB: SELECT count(*) FROM patient WHERE email = ?
+    activate DB
+    DB --> Repo: SetResult
+    deactivate DB
+
+    alt #MistyRose Email существует
+        Repo --> Service: true
+        Service -> GEH: <color:#red>throw EmailAlreadyExistsException</color>
+        activate GEH
+        GEH --[#red]> AC: <color:#red>400 BAD REQUEST</color>
+        deactivate GEH
+    end
+    Repo --> Service: false
+    deactivate Repo
+
+    Service -> Mapper: **[8]** toEntity(DTO)
+    activate Mapper
+    Mapper --> Service: Patient Entity
+    deactivate Mapper
+
+    Service -> Repo: **[9]** save(Patient)
+    activate Repo
+    Repo -> DB: SQL: INSERT INTO patient...
+    activate DB
+    DB --> Repo: Success
+    deactivate DB
+    note right: **COMMIT**
+    Repo --> Service: Saved Entity
+    deactivate Repo
+
+    Service -> Grpc: **[10]** BillingRequest
+    activate Grpc
+    Grpc -> BS: **[11]** gRPC createBillingAccount
+    activate BS
+    alt #MistyRose Ошибка gRPC (Рассинхрон)
+        BS --[#red]> Grpc: <color:#red>StatusRuntimeException</color>
+        Grpc --[#red]> GEH: <color:#red>throw Exception</color>
+        activate GEH
+        GEH --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+        deactivate GEH
+    end
+    BS --> Grpc: Response OK
+        deactivate BS
+
+    Grpc --> Service: Response
+    deactivate Grpc
+
+    Service -> Kafka: **[12]** sendEvent(newPatient)
+    activate Kafka
+    Kafka -> KF: **[13]** Send Protobuf
+    activate KF
+    alt #MistyRose Ошибка Kafka (Рассинхрон)
+        KF --[#red]> Kafka: <color:#red>Connection Error</color>
+        Kafka -> GEH: <color:#red>throw Exception</color>
+        activate GEH
+        GEH --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+        deactivate GEH
+    end
+    KF --> Kafka: Ack
+    deactivate KF
+    Kafka --> Service: Success
+    deactivate Kafka
+
+    Service -> Mapper: **[14]** toDTO(Saved Entity)
+    activate Mapper
+    Mapper --> Service: PatientResponseDTO
+    deactivate Mapper
+
+    Service --> Ctrl: **[15]** Return ResponseEntity.ok(dto)
+    deactivate Service
+
+    Ctrl --> DS: Return DTO
+    deactivate Ctrl
+
+    DS -> Jackson: **[16]** Сериализация и отправка
+    activate Jackson
+    Jackson --> DS: JSON
+    deactivate Jackson
+
+    DS --> AC: **[17]** 200 OK (JSON)
+    deactivate DS
+end
+@enduml

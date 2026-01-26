@@ -1,0 +1,35 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+participant "frontend" as FE #FFF2CC
+boundary "api-gateway" as GW #FEF9E7
+participant "auth-service" as Auth #EBF5FB
+participant "patient-service" as PS #F4ECF7
+database "patient-db" as DB #F4ECF7
+autonumber "<b>0</b>"
+group #LightCyan Просмотр зарегистрированных пациентов
+    FE -> GW: PUT {host}/patients/{id}
+    activate FE #White
+    activate GW
+    GW -> Auth: GET {host}/validate
+    activate Auth
+    autonumber stop
+    Auth --> GW: 200 OK
+    deactivate Auth
+autonumber resume
+    GW -> PS: PUT  {host}/patients/{id}
+    activate PS
+PS->DB: Поиск по id и обновление записи
+  activate DB
+  autonumber stop
+DB-->PS: ОК
+deactivate DB
+autonumber resume
+PS-->GW: Response 200 OK + JSON
+deactivate PS
+autonumber stop
+GW-->FE: 200 OK + JSON
+deactivate GW
+  end
+@enduml

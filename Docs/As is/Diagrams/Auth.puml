@@ -2,43 +2,29 @@
 skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
-
-' Настройка участников
 participant "frontend" as FE #FFF2CC
 boundary "api-gateway" as GW #FEF9E7
 participant "auth-service" as Auth #EBF5FB
 database "auth-db" as DB #EAFAF1
-
 autonumber "<b>0</b>"
-
 group #LightCyan Аутентификации
-    ' Активация начинается в момент инициации запроса
-    FE -> GW: POST /api/v1/auth/login
+    FE -> GW: POST {host}/auth/login
     activate FE #White
     activate GW
-
-    GW -> Auth: Запрос проксируется в auth-service
+    GW -> Auth: Проксирование запроса
     activate Auth
-
-    autonumber 2.1 "<b>0.0</b>"
-
-    Auth -> Auth: Валидирует входные параметры
-    Auth -> DB: Ищет в базе данных совпадение по email
+    Auth -> Auth: Валидация входных параметров
+    Auth -> DB: Поиск в базе данных: совпадение по email
     activate DB
     DB --> Auth: Данные найдены
     deactivate DB
-
-    Auth -> Auth: Сравнивает пароль с хэшем из базы данных (BCrypt)
+    Auth -> Auth: Сравнение пароля с хэшем из базы данных (BCrypt)
+Auth -> Auth: Генерация JWT
     Auth --> GW: HTTP 200 OK + JWT
     deactivate Auth
-
-    autonumber 3 "<b>0</b>"
-    GW --> FE: API Gateway проксирует ответ на Frontend
+    GW --> FE: Проксирование ответа
     deactivate GW
-
-    ' Пункт 3: Внутренняя логика фронтенда
-    FE -> FE: Сохраняет в localStorage JWT и перенаправляет на главную страницу
-    ' Только здесь процесс ожидания/обработки завершен
+    FE -> FE: Сохранение в localStorage JWT и редирект на главную страницу
     end
     deactivate FE
 

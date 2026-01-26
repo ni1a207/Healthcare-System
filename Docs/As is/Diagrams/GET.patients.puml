@@ -1,0 +1,90 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+boundary "ApiConsumer" as AC #FEF9E7
+
+box "patient-service" #5D6D7E
+    participant "DispatcherServlet" as DS #White
+    participant "PatientController" as Ctrl #White
+    participant "PatientService" as Service #White
+    participant "PatientRepository" as Repo #White
+    participant "PatientMapper" as Mapper #White
+    participant "GlobalExceptionHandler" as GEH #LightSalmon
+    participant "Jackson" as Jackson #White
+end box
+
+database "patient_db" as DB #LightBlue
+
+group #LightCyan Процесс получения списка пациентов (GET /patients)
+    AC -> DS: GET /patients
+    activate DS
+
+    DS -> Ctrl: **[1]** getPatients()
+    activate Ctrl
+
+    Ctrl -> Service: **[2]** вызвать getPatients()
+    activate Service
+
+    Service -> Repo: **[3]** findAll()
+    activate Repo
+
+    Repo -> Repo: **[4]** SimpleJpaRepository (Proxy)
+
+    note over Repo, DB: **[5]** Hibernate + HikariCP + JDBC
+    Repo -> DB: SQL: SELECT * FROM patient
+    activate DB
+
+    alt #MistyRose Ошибка БД (500)
+        DB --[#red]> Repo: <color:#red>Connection Error / Timeout</color>
+        Repo --[#red]> Service: <color:#red>DataAccessException</color>
+        Service --[#red]> Ctrl: <color:#red>Exception</color>
+        Ctrl --[#red]> GEH: <color:#red>Перехват исключения</color>
+        activate GEH
+        GEH --[#red]> DS: <color:#red>Сформированная структура ошибки</color>
+        deactivate GEH
+        DS --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+    else #LightCyan Успешное выполнение
+        DB --> Repo: **[6]** ResultSet
+        deactivate DB
+
+        Repo -> Repo: **[7]** Hydration (ResultSet -> Patient)
+
+        Repo --> Service: **[8]** List<Patient>
+        deactivate Repo
+
+        group #LightCyan Трансформация данных (Stream API)
+            Service -> Mapper: **[9]** toDTO(patient)
+            activate Mapper
+
+            alt #MistyRose Ошибка маппинга (500)
+                Mapper --[#red]> Service: <color:#red>RuntimeException</color>
+                Service --[#red]> Ctrl: <color:#red>Exception</color>
+                Ctrl --[#red]> GEH: **[10]** <color:#red>Перехват исключения</color>
+                activate GEH
+                GEH --[#red]> DS: <color:#red>Сформированная структура ошибки</color>
+                deactivate GEH
+                DS --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+            else #LightGreen Успешный маппинг
+                Mapper --> Service: PatientResponseDTO
+                deactivate Mapper
+
+                Service --> Ctrl: **[11]** List<PatientResponseDTO>
+                deactivate Service
+
+                Ctrl --> DS: **[12]** ResponseEntity
+                deactivate Ctrl
+
+                DS -> Jackson: **[13]** Serialize to JSON
+                activate Jackson
+                Jackson --> DS: **[14]** JSON String
+                deactivate Jackson
+
+                DS --> AC: **[15]** 200 OK (body: JSON)
+                deactivate DS
+            end
+        end
+    end
+end
+@enduml

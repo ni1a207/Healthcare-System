@@ -1,0 +1,55 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+participant "frontend" as FE #FFF2CC
+boundary "api-gateway" as GW #FEF9E7
+participant "auth-service" as Auth #EBF5FB
+participant "patient-service" as PS #F4ECF7
+database "patient-db" as DB #F4ECF7
+participant "BillingServiceGrpcClient" as BSGRPC #F4ECF7
+participant "billing-service" as BS #F4ECF7
+participant "kafka" as K #F4ECF7
+autonumber "<b>0</b>"
+group #LightCyan Регистрация нового пациента
+    FE -> GW: POST {host}/patients
+    activate FE #White
+    activate GW
+    GW -> Auth: GET {host}/validate
+    activate Auth
+    autonumber stop
+    Auth --> GW: 200 OK
+    deactivate Auth
+autonumber resume
+    GW -> PS: POST {host}/patients
+    activate PS
+  PS->PS: Валидация входных параметров
+  PS->DB: Поиск записей по полю email
+  activate DB
+  autonumber stop
+    DB-->PS: Записи не найдены
+PS->PS: Генерация UUID
+PS->DB: Новая запись
+DB-->PS: Данные записаны
+deactivate DB
+autonumber resume
+PS->BSGRPC: (patienId, name, email)
+activate BSGRPC
+BSGRPC->BS: CreateBillingAccount
+activate BS
+BS->BS: Логирование входящих данных
+autonumber stop
+BS-->BSGRPC: BillingResponse
+deactivate BS
+BSGRPC-->PS: OK
+deactivate BSGRPC
+autonumber resume
+PS->PS: Создает PatientEvent
+PS->>K: PatientEvent
+PS-->GW: Response 200 OK + JSON
+deactivate PS
+autonumber stop
+GW-->FE: 200 OK + JSON
+deactivate GW
+  end
+@enduml

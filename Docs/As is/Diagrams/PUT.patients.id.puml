@@ -1,0 +1,35 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+boundary "API Consumer" as ac #FEF9E7
+
+box "auth-service" #5D6D7E
+    participant "PatientController" as pc
+    participant "PatientService" as ps
+    participant "PatientRepository" as pr
+end box
+
+database "Database (patient_db)" as db #EAFAF1
+
+
+ac->pc++: DELETE /patients/{id}
+ac++
+pc->pc: обработка запроса
+pc->ps: deletePatient(@PathVariable UUID id)
+ps++
+ps->pr: deletePatient(@PathVariable UUID id)
+pr++
+
+pr->db++: JDBC (DELETE...)
+db-->pr: Response
+db--
+pr-->ps: Response
+pr--
+ps-->pc: Response
+pc-->ac:200OK
+pc--
+
+
+@enduml
