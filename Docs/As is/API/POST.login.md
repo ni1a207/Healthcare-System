@@ -59,7 +59,6 @@ Response code : 200 OK
 "token": "eyJhbGciOiJIUzI1NiJ9..."
 }
 ~~~
-> **⚠️ Техническая заметка:** Для активации нижеуказанных сообщений об ошибках (400 Bad Request) необходимо добавить аннотацию `@Valid` в `AuthController`. Без неё бизнес-валидация полей игнорируется.
 
 
 <details>
@@ -86,19 +85,19 @@ Response code : 200 OK
       <td rowspan="4">400</td>
       <td rowspan="4">BAD REQUEST</td>
       <td>"Email is required"</td>
-      <td>Поле email пустое или отсутствует. <br><span style="color: #FF8C00;">*Будет работать после добавления @Valid.*</span></td>
+      <td>Поле email пустое или отсутствует. 
     </tr>
     <tr>
       <td>"Email should be a valid email address"</td>
-      <td>Некорректный формат email. <br><span style="color: #FF8C00;">*Будет работать после добавления @Valid.*</span></td>
+      <td>Некорректный формат email. 
     </tr>
     <tr>
       <td>"Password is required"</td>
-      <td>Поле password пустое или отсутствует. <br><span style="color: #FF8C00;">*Будет работать после добавления @Valid.*</span></td>
+      <td>Поле password пустое или отсутствует. 
     </tr>
     <tr>
       <td>"Password must be at least 8 characters long"</td>
-      <td>Длина пароля менее 8 символов. <br><span style="color: #FF8C00;">*Будет работать после добавления @Valid.*</span></td>
+      <td>Длина пароля менее 8 символов. 
     </tr>
     <tr>
       <td>401</td>
@@ -156,10 +155,7 @@ Response code : 200 OK
     </tr>
   </tbody>
 </table>
-
-<span style="color: #FF8C00;">*Примечание: Валидация выполняется при наличии аннотации @Valid в контроллере.*</span>
 </details>
-
 
 
 2. `AuthController` вызывает метод `authenticate(LoginRequestDTO)` в `AuthService` для выполнения бизнес-логики аутентификации.

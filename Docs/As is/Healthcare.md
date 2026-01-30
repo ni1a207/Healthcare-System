@@ -105,7 +105,7 @@
 | [patient-service](Services%2Fpatient-service.md)     | PostgreSQL <br/>[patient_db](DB%2Fpatient_db.md)                | REST, gRPC, Kafka producer | Мастер-система для данных пациентов  |
 | [billing-service](Services%2Fbilling-service.md)     | -                                         | gRPC, REST                 | Финансовый модуль                    |
 | [analytics-service](Services%2Fanalytics-service.md) | -                                         | Kafka  consumer            | Сбор статистики                      |
-| [Kafka](Services%2FKafka.md)                         | -                                         | Kafka                      | Распределенный лог сообщений         |
+| [kafka](Services%2FKafka.md)                         | -                                         | Kafka                      | Распределенный лог сообщений         |
 
 ---
 ## Матрица трассировки требований
