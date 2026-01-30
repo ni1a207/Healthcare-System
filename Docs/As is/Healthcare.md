@@ -7,7 +7,7 @@
 ![HealthcareC4.svg](Diagrams%2FHealthcareC4.svg)
 
 ---
-## Сквозные сценарии взаимодействия с системой
+## Бизнес-процессы
 
 <details>
 <summary><b><font color="#2196F3">Аутентификация</font></b></summary>
@@ -98,24 +98,25 @@
 
 ---
 ## Реестр сервисов и инфраструктурных компонентов
-| Сервис                                               | БД                                        | API                        | Описание                             |
-|:-----------------------------------------------------|:------------------------------------------|:---------------------------|:-------------------------------------|
-| [api-gateway](Services%2Fapi-gateway.md)             | -                                         | REST                       | Точка входа, маршрутизация запросов  |
-| [auth-service](Services%2Fauth-service.md)           | PostgreSQL<br/>[auth_db](DB%2Fauth_db.md) | REST                       | Управление пользователями и сессиями |
-| [patient-service](Services%2Fpatient-service.md)     | PostgreSQL <br/>[patient_db](DB%2Fpatient_db.md)                | REST, gRPC, Kafka producer | Мастер-система для данных пациентов  |
-| [billing-service](Services%2Fbilling-service.md)     | -                                         | gRPC, REST                 | Финансовый модуль                    |
-| [analytics-service](Services%2Fanalytics-service.md) | -                                         | Kafka  consumer            | Сбор статистики                      |
-| [kafka](Services%2FKafka.md)                         | -                                         | Kafka                      | Распределенный лог сообщений         |
+| Сервис                                               | БД                                        | API                            | Описание                             |
+|:-----------------------------------------------------|:------------------------------------------|:-------------------------------|:-------------------------------------|
+| [api-gateway](Services%2Fapi-gateway.md)             | -                                         | REST                           | Точка входа, маршрутизация запросов  |
+| [auth-service](Services%2Fauth-service.md)           | PostgreSQL<br/>[auth_db](DB%2Fauth_db.md) | REST                           | Управление пользователями и сессиями |
+| [patient-service](Services%2Fpatient-service.md)     | PostgreSQL <br/>[patient_db](DB%2Fpatient_db.md)                | REST, gRPC, Kafka producer     | Мастер-система для данных пациентов  |
+| [billing-service](Services%2Fbilling-service.md)     | -                                         | gRPC, REST                     | Финансовый модуль                    |
+| [analytics-service](Services%2Fanalytics-service.md) | -                                         | Kafka  consumer                | Сбор статистики                      |
+| [kafka](Services%2FKafka.md)                         | -                                         | TCP (Protobuf), topic: patient | Распределенный лог сообщений         |
 
 ---
 ## Матрица трассировки требований
 
-| №     | Бизнес-функция                             | Релиз | Связанные сервисы                                                                                           | Базы данных                                     | API                                                                                                                  |
-|:------|:-------------------------------------------| :--- |:------------------------------------------------------------------------------------------------------------|:------------------------------------------------|:---------------------------------------------------------------------------------------------------------------------|
-| **1** | Аутентификация и авторизация пользователя  | **MVP** | [api-gateway](Services%2Fapi-gateway.md)<br/>[auth-service](Services%2Fauth-service.md)                     | [auth_db](DB%2Fauth_db.md)                      | [POST /login](API%2FPOST.login.md) <br/> [GET /validate](API%2FGET.validate.md)                                      |
-| **2** | Регистрация нового пациента                | **MVP** | [patient-service](Services%2Fpatient-service.md)  <br/> [billing-service](Services%2Fbilling-service.md)    | [patient_db](DB%2Fpatient_db.md)                | [POST /patients](API%2FPOST.patients.md) <br/> [gRPC createBilling](API%2FgRPC.createBilling.md) <br/> kafkaProducer |
-| **3** | Просмотр всех зарегистрированных пациентов | **MVP** | [patient-service](Services%2Fpatient-service.md)                                                            | [patient_db](DB%2Fpatient_db.md)                                  | [GET /patients](API%2FGET.patients.md)                                                                               |
-| **4** | Изменение данных пациента                  | **MVP** | [patient-service](Services%2Fpatient-service.md)                                                            |[patient_db](DB%2Fpatient_db.md)                                  | [PUT /patients/{id}](API%2FPUT.patients.id.md)                                                                       |
-| **5** | Удаление пациента                          | **MVP** | [patient-service](Services%2Fpatient-service.md)                                                            | [patient_db](DB%2Fpatient_db.md)                                   | [DELETE /patients/{id}](API%2FDELETE.patients.id.md)                                                                 |
+| №     | Бизнес-процесс                        | Релиз   | Связанные сервисы                                                                                                                                                                                        | Базы данных                                     | API                                                                                                                                      |
+|:------|:--------------------------------------|:--------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------|
+| **1** | Аутентификация                        | **MVP** | [api-gateway](Services%2Fapi-gateway.md)<br/>[auth-service](Services%2Fauth-service.md)                                                                                                                  | [auth_db](DB%2Fauth_db.md)                      | [POST /login](API%2FPOST.login.md)  <br/> [Алгоритмы API Gateway](API%2FAPIGateway.md)                                                                                                       |
+| **2** | Авторизация и маршрутизация           | **MVP** | [api-gateway](Services%2Fapi-gateway.md)<br/>[auth-service](Services%2Fauth-service.md)                                                                                                                  |[auth_db](DB%2Fauth_db.md)| [GET /validate](API%2FGET.validate.md) <br/> [Алгоритмы API Gateway](API%2FAPIGateway.md)                                                |
+| **3** | Регистрация пациента и создание счета | **MVP** | [patient-service](Services%2Fpatient-service.md)  <br/> [billing-service](Services%2Fbilling-service.md)  <br/> [analytics-service (async consumer)](Services%2Fanalytics-service.md) <br/> [kafka](Services%2Fkafka.md) | [patient_db](DB%2Fpatient_db.md)                | [POST /patients](API%2FPOST.patients.md) <br/> [gRPC createBilling](API%2FgRPC.createBilling.md) <br/> kafkaProducer <br/> kafkaConsumer |
+| **4** | Просмотр зарегистрированных пациентов | **MVP** | [patient-service](Services%2Fpatient-service.md)                                                                                                                                                         | [patient_db](DB%2Fpatient_db.md)                                  | [GET /patients](API%2FGET.patients.md)                                                                                                   |
+| **5** | Изменение личных данных пациента      | **MVP** | [patient-service](Services%2Fpatient-service.md)                                                                                                                                                         |[patient_db](DB%2Fpatient_db.md)                                  | [PUT /patients/{id}](API%2FPUT.patients.id.md)                                                                                           |
+| **6** | Удаление пациента                     | **MVP** | [patient-service](Services%2Fpatient-service.md)                                                                                                                                                         | [patient_db](DB%2Fpatient_db.md)                                   | [DELETE /patients/{id}](API%2FDELETE.patients.id.md)                                                                                     |
 
 ---
