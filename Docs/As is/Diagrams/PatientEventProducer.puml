@@ -1,0 +1,47 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+box "patient-service" #5D6D7E
+    participant "PatientService" as PS #White
+    participant "KafkaProducer" as Kafka #White
+    participant "PatientEvent.newBuilder" as Builder #White
+    participant "KafkaTemplate" as KT #White
+end box
+
+queue "Kafka" as KF #FADBD8
+
+group #LightCyan Алгоритм публикации
+    PS -> Kafka: sendEvent(newPatient)
+    activate Kafka
+
+    Kafka -> Builder: newBuilder()
+    activate Builder
+    Builder -> Builder: set fields
+    Builder --> Kafka: PatientEvent (byte[])
+    deactivate Builder
+
+    Kafka -> KT: send("patient", byte[])
+    activate KT
+
+    KT -> KF: Передача сообщения в топик patient (TCP)
+    activate KF
+
+    alt #HoneyDew Успешная отправка
+        KF --[#green]> KT: RecordMetadata (Ack)
+        KT --[#green]> Kafka: Future Success
+    else #MistyRose Сбой брокера (Timeout/Error)
+        KF --[#red]> KT: <color:#red>Error</color>
+        deactivate KF
+        KT --[#red]> Kafka: <color:#red>throw Exception</color>
+        deactivate KT
+
+        Kafka -> Kafka: <color:#red>log.error("Error sending...", event)</color>
+        note right #White: Исключение поглощено.\nПоток выполнения в PS продолжается.
+    end
+
+    Kafka --> PS: Завершение метода (void)
+    deactivate Kafka
+end
+@enduml
