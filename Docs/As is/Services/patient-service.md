@@ -1,4 +1,4 @@
-# Patient Service
+# patient-service
 
 ## Назначение
 Сервис управления данными пациентов. Реализует CRUD-операции, синхронное создание платежного аккаунта в Billing Service через gRPC и асинхронную публикацию событий создания пациента в Kafka.
@@ -11,11 +11,10 @@
 * **Framework**: Spring Boot 3.4.0. (Spring Data JPA, Spring Web).
 * **Database**: PostgreSQL 17 (runtime), H2 (In-memory/Test).
 * **Messaging**: Spring Kafka 3.3.0. (Protobuf serialization).
-* **Protocols**: REST (HTTP), gRPC (Client).
-* **Serialization**: Protobuf 4.29.1 (для gRPC и Kafka).
+* **Protocols**: REST (HTTP), gRPC/Kafka (Protobuf 4.29.1).
 * **Build Tool**: Maven 3.9.9.
 * **Infrastructure**: Docker / AWS CDK (Fargate).
-* **Logging**: SLF4J/Logback (Level: INFO).
+* **Logging**: SLF4J (Logback).
   
  *В коде присутствует закомментированная конфигурация для H2 (In-memory), которая может быть активирована для локальных тестов.*
 
@@ -33,22 +32,23 @@
 | [POST /patients](..%2FAPI%2FPOST.patients.md)                | Создание нового  пациента в системе                | 
 | [GET /patients](..%2FAPI%2FGET.patients.md)                  | Получение списка всех зарегистрированных пациентов | 
 | [PUT /patients/{id}](..%2FAPI%2FPUT.patients.id.md)          | Изменение данных пациента в системе                | 
-| [DELETE /patients/{id}](..%2FAPI%2FDELETE.patients.id.md) | Удаление пациента из системы                       | 
+| [DELETE /patients/{id}](..%2FAPI%2FDELETE.patients.id.md) | Удаление пациента из системы                       |
+
+### gRPC
+Интеграция с `billing-service`. Синхронное создание финансового счета пациента через адаптер BillingServiceGrpcClient.
 
 
-### gRPC  
-* **Service**: BillingService
-* **Method**: createBillingAccount 
+| Метод | Путь (Service/Method) | Протокол | Формат | Описание |
+| :--- | :--- | :--- | :--- | :--- |
+| `CreateBillingAccount` | `BillingService/CreateBillingAccount` | gRPC (HTTP/2) | Protobuf | Создание биллингового аккаунта пациента |
 
- 
-**Синхронное создание финансового счета пациента через адаптер BillingServiceGrpcClient.*
-### Kafka
-* **Topic**: patient
-* **Event**: PatientEvent (Protobuf)
-* **Role**: Producer
-* **Event Type**: PATIENT_CREATED
-* **Key-serializer**: StringSerializer 
-* **Value-serializer**: ByteArraySerializer
+### Kafka Producer
+Сервис публикует события в брокер сообщений для уведомления других компонентов системы.
+
+| Топик | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `patient` | `PATIENT_CREATED` | Kafka TCP | Protobuf | `null` | Нотификация о создании нового пациента |
+
 ## Переменные окружения
 ### Application (patient-service)
 | Переменная | Значение | Описание |
