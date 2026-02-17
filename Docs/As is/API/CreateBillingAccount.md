@@ -1,8 +1,17 @@
 # CreateBillingAccount (gRPC)
 
-## Назначение
+## Общая информация
 
-Создание нового финансового счета для пациента. Метод вызывается `patient-service`.
+**Назначение**: Метод предназначен для создания нового финансового счета для пациента. Метод вызывается сервисом `patient-service`.
+
+**Сервис:** `billing.BillingService`
+
+**Метод:** `CreateBillingAccount`
+
+**Тип вызова:** Unary
+
+---
+
 
 ## Протокол вызова
 
@@ -10,109 +19,117 @@
 rpc CreateBillingAccount (BillingRequest) returns (BillingResponse);
 
 ```
+---
+## Входные и выходные параметры
+<details>
+<summary><b><font color="#2196F3">Входные параметры</font></b></summary>
+Metadata:
+Генерируются автоматически
 
-## Параметры вызова
+| Параметр     | Обязательность | Описание | Значение (по умолчанию) |
+|:-------------| :---: | :--- |:------------------------|
+| `content-type` | Да | Определяет протокол взаимодействия | application/grpc        |
+| `user-agent  ` | Нет | Идентификатор клиента (библиотеки) | grpc-java-netty/1.69.0  |
+| `te`           | Да | Тип передачи (ожидание трейлеров) | trailers                |
 
-**Сервис:** `billing.BillingService`
+Body:
 
-**Метод:** `CreateBillingAccount`
+| Параметр    | Тип данных | Обязательность | Описание | Значение/пример| Маппинг с db |
+|-------------|------------|----------------| --- | - | - |
+| `patientId` | string     | Да             | UUID пациента из системы Patient Service | 550e8400-e29b-41d4-a716-446655440000 | Не мапится (Mock) |
+| `name`      | string     | Да             | Полное имя пациента для привязки к счету | Иван Иванов | Не мапится (Mock) |
+| `email`     | string     | Да             | Контактный email для финансовых уведомлений | ivanov@example.com | Не мапится (Mock) |
+</details>
 
-**Тип вызова:** Unary 
+<details>
+<summary><b><font color="#2196F3">Выходные параметры</font></b></summary>
+Trailers:
 
-### Входные параметры (BillingRequest)
+| Параметр       | Тип данных | Описание | Код / Значение |
+|:---------------|:----------:| :--- |:---------------|
+| `grpc-status `   |  Trailer   | Основной результат операции | 0 OK           |
+| `grpc-message `  |  Trailer   | Сообщение об ошибке | пустая строка  |
 
-| Поле | Тип | Обяз. | Описание |
-| --- | --- | --- | --- |
-| `patientId` | string | Да | UUID пациента из системы Patient Service |
-| `name` | string | Да | Полное имя пациента для привязки к счету |
-| `email` | string | Да | Контактный email для финансовых уведомлений |
+Body:
 
-### Выходные параметры (BillingResponse)
+| Параметр    | Тип данных | Обязательность                             | Описание                                           | Значение/пример| Маппинг с db |
+|-------------|------------|--------------------------------------------|----------------------------------------------------| - | - |
+| `accountId` | string | Да                                         |  Уникальный номер созданного счета (ID в биллинге) | 12345 | Не мапится (Mock) |
+| `status` | string | Да | Текущий статус аккаунта (напр., `ACTIVE`) | ACTIVE | Не мапится (Mock) |
+</details> 
 
-| Поле | Тип | Описание |
-| --- | --- | --- |
-| `accountId` | string | Уникальный номер созданного счета (ID в биллинге) |
-| `status` | string | Текущий статус аккаунта (напр., `ACTIVE`) |
+---
 
-**Request:**
+## Примеры зампроса и ответа
+
+Запрос:
 
 ```json
+Metadata:
+content-type: application/grpc
+user-agent: grpc-java-netty/1.69.0
+te: trailers
+Request Body (Protobuf):
 {
   "patientId": "550e8400-e29b-41d4-a716-446655440000",
   "name": "Иван Иванов",
   "email": "ivanov@example.com"
 }
-
 ```
 
-**Response:**
-
+Ответ:
 ```json
+Response Status: 0 OK 
+Response Body (Protobuf):
 {
   "accountId": "12345",
   "status": "ACTIVE"
 }
-
+Response Trailers:
+grpc-status: 0
+grpc-message: ""
 ```
+<details>
+<summary><b><font color="#2196F3">Варианты возвращаемых gRPC статус кодов</font></b></summary>
 
-## Коды ответов
 
-| Код | Статус | Описание |
-| --- | --- | --- |
-| **0** | `OK` | Счет успешно создан. |
-| **3** | `INVALID_ARGUMENT` | Ошибка валидации полей (например, пустой email). |
+| Код    | Статус | Описание |
+|--------| --- | --- |
+| **0**  | `OK` | Счет успешно создан. |
+| **13** | `INTERNAL` | Ошибка десериализации бинарного потока. |
 | **14** | `UNAVAILABLE` | Сервис биллинга временно недоступен. |
+</details> 
+
+---
 
 ## Алгоритм работы
-
-1. Библиотека grpc-netty-shaded принимает входящий TCP-пакет на порту 9001. HTTP/2 фреймы извлекаются и передаются в стек обработки gRPC.
-
-
-2. Библиотека protobuf-java выполняет десериализацию бинарных данных из тела запроса в Java-объект BillingRequest. Если структура данных повреждена, gRPC нативно возвращает статус-код 13 INTERNAL.
+1. `patient-service` инициирует gRPC-вызов к `billing-service`. Если `billing-service` выключен или порт закрыт, клиентская библиотека сразу возвращает статус-код `14 UNAVAILABLE`. Дальнейшие шаги не выполняются.
 
 
-3. grpc-spring-boot-starter находит компонент, помеченный аннотацией @GrpcService, и передает управление методу createBillingAccount класса BillingGrpcService.
+2. Библиотека `grpc-netty-shaded` принимает входящий TCP-пакет. HTTP/2 фреймы извлекаются и передаются в стек обработки gRPC.
 
-Логирование: С помощью SLF4J выполняется запись в лог уровня INFO: createBillingAccount request received {данные_запроса}. В лог попадают значения полей patientId, name и email, полученные из billingRequest.toString().
 
-Исполнение бизнес-логики (Mock): В текущей реализации интеграция с базой данных или внешней платежной системой отсутствует. Сервис выполняет роль заглушки (mock).
+3. Библиотека `protobuf-java` выполняет десериализацию бинарных данных из тела запроса в Java-объект `BillingRequest`. Если структура данных повреждена, возвращается статус-код `13 INTERNAL`.
 
-Сборка ответа через Builder: С помощью сгенерированного класса BillingResponse.Builder формируется ответный объект:
 
-setAccountId("12345"): устанавливается статичный идентификатор счета.
+4. `grpc-spring-boot-starter` находит компонент, помеченный аннотацией `@GrpcService`, и передает управление методу `createBillingAccount` класса `BillingGrpcService`.
 
-setStatus("ACTIVE"): устанавливается статичный статус.
 
-Метод build() создает итоговый объект BillingResponse.
+5. С помощью `SLF4J` выполняется запись в лог уровня INFO: `createBillingAccount request received {данные_запроса}`. В лог попадают значения полей `patientId`, `name` и `email`, полученные из `billingRequest.toString()`.
 
-Передача ответа в поток (StreamObserver): Метод responseObserver.onNext(response) передает объект BillingResponse обратно в gRPC-инфраструктуру. На этом этапе данные сериализуются в бинарный формат Protobuf.
 
-Завершение стрима: Вызов метода responseObserver.onCompleted() сигнализирует вызывающей стороне (patient-service), что обработка запроса завершена успешно. Клиент получает статус-код 0 OK.
+6. Вызывается метод `BillingResponse.newBuilder()`, который создает экземпляр класса `Builder` для конструирования ответного сообщения.
 
-1. Прием сообщения `BillingRequest`.
-2. Логирование входящего запроса (вывод в консоль параметров пациента).
-3. [Mock-логика] Генерация системного `accountId` (в текущей реализации всегда "12345").
-4. [Mock-логика] Присвоение статуса "ACTIVE".
-5. Формирование и отправка `BillingResponse`.
 
-## Sequence Diagram (SQD)
+7. В объекте `Builder` последовательно вызываются методы `setAccountId("12345")` и `setStatus("ACTIVE")`. После этого вызывается метод `build()`, который возвращает готовый неизменяемый объект `BillingResponse`.
+ 
 
-```puml
-@startuml
-skinparam Shadowing true
-skinparam RoundCorner 5
+8. Метод `responseObserver.onNext(response)` передает объект `BillingResponse` обратно в gRPC-инфраструктуру, где `protobuf-java` выполняет его сериализацию в бинарный формат.
 
-participant "PatientService" as PS #White
-participant "BillingGrpcService" as BS #White
 
-PS -> BS: CreateBillingAccount(patientId, name, email)
-activate BS
+9. Метод `responseObserver.onCompleted()` закрывает стрим.`patient-service`получает статус-код `0 OK`.
 
-BS -> BS: Log request details
-note right: Business logic placeholder\n(save to DB, calculate)
+> **Важно**: Текущая реализация сервиса является заглушкой (mock). Сохранение данных в базу данных и реальная генерация ID аккаунта не выполняются. 
 
-BS --> PS: BillingResponse(accountId: "12345", status: "ACTIVE")
-deactivate BS
-@enduml
 
-```
+![CreateBillingAccount.svg](..%2FDiagrams%2FCreateBillingAccount.svg)

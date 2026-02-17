@@ -5,7 +5,7 @@
 
 ## Архитектурная схема (C4 Component)
 
-`сделать `
+![billing-serviceC4.svg](..%2FDiagrams%2Fbilling-serviceC4.svg)
 
 ## Стек технологий
 * **Runtime**: Java 21 (Eclipse Temurin / OpenJDK)).
@@ -25,26 +25,10 @@
 ## API
 ### gRPC
 
-| Метод | Тип запроса | Тип ответа | Описание |
-| :--- | :--- | :--- | :--- |
-| `CreateBillingAccount` | `BillingRequest` | `BillingResponse` | Создание нового биллингового счета для пациента |
+| Метод                                                      | Тип запроса    | Тип ответа      | Описание |
+|:-----------------------------------------------------------|:---------------|:----------------| :--- |
+| [CreateBillingAccount](..%2FAPI%2FCreateBillingAccount.md) | BillingRequest | BillingResponse | Создание нового биллингового счета для пациента |
 
-**Структуры данных (Protobuf):**
-
-**BillingRequest**
-
-| Поле | Тип | Описание |
-| :--- | :--- | :--- |
-| `patientId` | string | Идентификатор пациента из patient-service |
-| `name` | string | ФИО пациента |
-| `email` | string | Контактный email |
-
-**BillingResponse**
-
-| Поле | Тип | Описание |
-| :--- | :--- | :--- |
-| `accountId` | string | Генерируемый номер счета |
-| `status` | string | Статус счета (напр. ACTIVE) |
 
 ## Переменные окружения
 

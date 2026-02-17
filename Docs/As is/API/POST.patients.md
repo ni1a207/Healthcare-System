@@ -1,6 +1,6 @@
 # Endpoint `POST {host}/api/patients`
 
-### Общая информация
+## Общая информация
 **Назначение:** Метод предназначен для добавления нового пациента в систему: сохранение данных о пациенте в системе и открытие счета для оплаты медицинских услуг.
 
 **Метод:** POST
@@ -9,7 +9,7 @@
 
 ---
 
-### Входные и выходные параметры
+## Входные и выходные параметры
 <details>
 <summary><b><font color="#2196F3">Входные параметры</font></b></summary>
 
@@ -48,7 +48,7 @@ Body (JSON):
 ## Примеры запроса и ответа
 
 Запрос:
-~~~ 
+~~~ json
 curl -X POST "{host}/api/v1/patients" \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
@@ -62,7 +62,7 @@ curl -X POST "{host}/api/v1/patients" \
 ~~~
 
 Ответ:
-~~~
+~~~json
 Response code : 200 OK
 Response body (json):
 {
