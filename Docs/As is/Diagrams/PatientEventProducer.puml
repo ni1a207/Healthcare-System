@@ -4,6 +4,7 @@ skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
 box "patient-service" #5D6D7E
+    database "PostgreSQL\n(patient_db)" as DB #White
     participant "PatientService" as PS #White
     participant "KafkaProducer" as Kafka #White
     participant "PatientEvent.newBuilder" as Builder #White
@@ -13,13 +14,18 @@ end box
 queue "Kafka" as KF #FADBD8
 
 group #LightCyan Алгоритм публикации
+    PS -> DB: save(PatientEntity)
+    activate DB
+    DB --> PS: newPatient (id, name, email)
+    deactivate DB
+
     PS -> Kafka: sendEvent(newPatient)
     activate Kafka
 
     Kafka -> Builder: newBuilder()
     activate Builder
-    Builder -> Builder: set fields
-    Builder --> Kafka: PatientEvent (byte[])
+    Builder -> Builder: set fields from Entity
+    Builder --> Kafka: PatientEvent (Object)
     deactivate Builder
 
     Kafka -> KT: send("patient", byte[])
@@ -31,14 +37,14 @@ group #LightCyan Алгоритм публикации
     alt #HoneyDew Успешная отправка
         KF --[#green]> KT: RecordMetadata (Ack)
         KT --[#green]> Kafka: Future Success
-    else #MistyRose Сбой брокера (Timeout/Error)
+    else #MistyRose Timeout/Error
         KF --[#red]> KT: <color:#red>Error</color>
         deactivate KF
         KT --[#red]> Kafka: <color:#red>throw Exception</color>
         deactivate KT
 
-        Kafka -> Kafka: <color:#red>log.error("Error sending...", event)</color>
-        note right #White: Исключение поглощено.\nПоток выполнения в PS продолжается.
+        Kafka -[#red]> Kafka: <color:#red>log.error("Error sending...", event)</color>
+        note right: **Data Inconsistency:**\nData saved in DB,\nbut lost in Kafka
     end
 
     Kafka --> PS: Завершение метода (void)

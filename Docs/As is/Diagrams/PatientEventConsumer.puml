@@ -1,0 +1,46 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+box "analytics-service"  #5D6D7E
+    participant "KafkaConsumer" as Consumer #White
+    participant "PatientEvent (Protobuf)" as Proto #White
+end box
+
+queue "Kafka" as KF #FADBD8
+
+[-> KF : Новое сообщение в топике "patient"
+activate KF
+
+group #LightCyan Алгоритм обработки (consumeEvent)
+    KF -> Consumer : consumeEvent(byte[] event)
+    activate Consumer
+
+    Consumer -> Proto : parseFrom(byte[])
+    activate Proto
+
+    alt #HoneyDew Успешная десериализация
+        Proto --> Consumer : PatientEvent (Object)
+        deactivate Proto
+
+        Consumer -> Consumer : Извлечение: patientId, name, email
+
+        Consumer -[#green]> Consumer : <color:#green>log.info("Received Patient Event: [...]")</color>
+        note right: Вывод данных пациента в консоль
+
+    else #MistyRose Неверный формат / данные повреждены
+        Proto --[#red]> Consumer : <color:#red>throw InvalidProtocolBufferException</color>
+        deactivate Proto
+
+        Consumer -[#red]> Consumer : <color:#red>log.error("Error deserializing event", e)</color>
+        note right: **Фиксация сбоя:**\nДанные не могут быть прочитаны
+    end
+KF <-- Consumer : Offset Commit (Implicit)
+
+    deactivate Consumer
+end
+
+deactivate KF
+
+@enduml

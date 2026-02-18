@@ -8,7 +8,7 @@
 ![billing-serviceC4.svg](..%2FDiagrams%2Fbilling-serviceC4.svg)
 
 ## Стек технологий
-* **Runtime**: Java 21 (Eclipse Temurin / OpenJDK)).
+* **Runtime**: Java 21 (Eclipse Temurin / OpenJDK).
 * **Framework**: Spring Boot 3.4.1.
 * **Protocols**: gRPC (v1.69.0), Protobuf (v4.29.1).
 * **Library**: grpc-spring-boot-starter (v3.1.0.RELEASE).
