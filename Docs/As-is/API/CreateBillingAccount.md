@@ -130,6 +130,6 @@ grpc-message: ""
 9. Метод `responseObserver.onCompleted()` закрывает стрим.`patient-service`получает статус-код `0 OK`.
 
 > **Важно**: Текущая реализация сервиса является заглушкой (mock). Сохранение данных в базу данных и реальная генерация ID аккаунта не выполняются. 
-1
+
 
 ![CreateBillingAccount.svg](../Diagrams/CreateBillingAccount.svg)
