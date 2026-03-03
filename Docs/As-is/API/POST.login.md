@@ -3,7 +3,7 @@
 ## Общая информация
 **Назначение:** Аутентификация пользователя и генерация JWT-токена при успешном входе.
 
-**Метод:** POST
+**Метод:** `POST`
 
 **Внутренний URL:** `http://auth-service:4005/login`
 
@@ -30,9 +30,9 @@ Body (JSON):
 
 Body (JSON):
 
-| Параметр | Тип данных | Обязательность | Описание | Значение/пример | Маппинг с auth_db |
-|:------|:-----------|:---------------|:---------|:-----------------|:------------------|
-| token | string | да | Сгенерированный JWT-токен | eyJhbGciOiJIUzI1NiJ9... | - |
+| Параметр | Тип данных | Описание | Значение/пример | Маппинг с auth_db |
+|:------|:---------------|:---------|:-----------------|:------------------|
+| token | string |  Сгенерированный JWT-токен | eyJhbGciOiJIUzI1NiJ9... | - |
 
 </details>
 
@@ -42,13 +42,12 @@ Body (JSON):
 
 Запрос:
 ~~~json
-POST /login
-Content-Type: application/json
-
-{
+curl -X POST "http://{gateway-host}/auth/login" \
+-H "Content-Type: application/json" \
+-d '{
 "email": "user@example.com",
 "password": "securePassword123"
-}
+}'
 ~~~
 
 Ответ (Успех):
@@ -82,24 +81,6 @@ Response code : 200 OK
       <td>Успешная проверка email, password.</td>
     </tr>
     <tr>
-      <td rowspan="4">400</td>
-      <td rowspan="4">BAD REQUEST</td>
-      <td>"Email is required"</td>
-      <td>Поле email пустое или отсутствует. 
-    </tr>
-    <tr>
-      <td>"Email should be a valid email address"</td>
-      <td>Некорректный формат email. 
-    </tr>
-    <tr>
-      <td>"Password is required"</td>
-      <td>Поле password пустое или отсутствует. 
-    </tr>
-    <tr>
-      <td>"Password must be at least 8 characters long"</td>
-      <td>Длина пароля менее 8 символов. 
-    </tr>
-    <tr>
       <td>401</td>
       <td>UNAUTHORIZED</td>
       <td>- </td>
@@ -115,77 +96,58 @@ Response code : 200 OK
 </table>
 </details>
 
+> **Важно:** Валидация входных параметров не реализована — в AuthController отсутствует аннотация @Valid. Поля email и password принимаются без проверки формата и обязательности. HTTP статус-код 400 BAD REQUEST недостижим.
 ---
 
 ## Алгоритм работы
 
-1. `auth-service` через `AuthController` получает запрос `POST /login`. Входящий JSON-пакет десериализуется в Java-объект `LoginRequestDTO` и валидируются входные параметры:
 
-<details>
-<summary><span style="color: #2E86C1;">Валидация входных параметров </span></summary>
-
-<table>
-  <thead>
-    <tr>
-      <th>Параметр</th>
-      <th>Результат (в случае ошибки)</th>
-      <th>HTTP Код</th>
-      <th>Сообщение (Body)</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td rowspan="2">email</td>
-      <td>Строка является пустой, состоит только из пробелов или поле полностью отсутствует в JSON-запросе.</td>
-      <td rowspan="4">400</td>
-      <td>"Email is required"</td>
-    </tr>
-    <tr>
-      <td>Текстовое значение не соответствует базовому формату адреса (отсутствует символ @, либо он расположен в начале/конце строки).</td>
-      <td>"Email should be a valid email address"</td>
-    </tr>
-    <tr>
-      <td rowspan="2">password</td>
-      <td>Строка является пустой, состоит только из пробелов или поле полностью отсутствует в JSON-запросе.</td>
-      <td>"Password is required"</td>
-    </tr>
-    <tr>
-      <td>Количество символов в переданной строке меньше минимально допустимого порога (8 знаков).</td>
-      <td>"Password must be at least 8 characters long"</td>
-    </tr>
-  </tbody>
-</table>
-</details>
+1. `auth-service` через `DispatcherServlet` принимает входящий HTTP-запрос `POST /login`.
 
 
-2. `AuthController` вызывает метод `authenticate(LoginRequestDTO)` в `AuthService` для выполнения бизнес-логики аутентификации.
+2. `DispatcherServlet` передаёт входящий JSON в библиотеку `Jackson` для десериализации.
 
 
-3. `AuthService` выполняет поиск пользователя в базе данных `auth_db`. Через интерфейс `UserService` вызывается метод `findByEmail`. С помощью Hibernate формируется и выполняется запрос к таблице `users` для извлечения записи по уникальному идентификатору `email`. Если запись в базе данных не найдена — `AuthService` возвращает пустое значение `Optional.empty()`, `AuthController` возвращает статус-код `401 UNAUTHORIZED`.
+3. `Jackson` десериализует тело запроса из JSON в объект `LoginRequestDTO` и возвращает в `DispatcherServlet`.
 
 
-4. `AuthService` верифицирует пароль пользователя. Система извлекает зашифрованный хеш из найденного объекта пользователя в базе данных (поле `password`) и передает его вместе с «сырым» паролем из `LoginRequestDTO` в метод `matches()` компонента `BCryptPasswordEncoder`.
-
-   4.1. Алгоритм `BCrypt` извлекает соль из сохраненного хеша, применяет её к паролю из запроса и выполняет побитовое сравнение. Если результаты не совпадают, метод `matches()` возвращает значение `false`, `AuthService` возвращает `Optional.empty()`, `AuthController` возвращает статус-код `401 UNAUTHORIZED`.
-
-   Если в объекте `LoginRequestDTO` поле `password` имеет значение `null`, метод `BCryptPasswordEncoder.matches()` выбрасывает исключение `IllegalArgumentException` — `AuthController` возвращает статус-код `500 INTERNAL SERVER ERROR`.
+> **Важно:** Аннотация `@Valid` в `AuthController` отсутствует — валидация полей `LoginRequestDTO` не выполняется. Некорректные или пустые значения передаются в `AuthService` без проверки.
 
 
-5. `AuthService` генерирует `JWT`. После успешной аутентификации вызывается метод `jwtUtil.generateToken()`, который использует библиотеку `JJWT` для сборки токена:
-
-   5.1. В `Payload` токена записывается: `email` пользователя в качестве `sub` и его роль в качестве `role` как пользовательский `Claim`.
-
-   5.2. Устанавливается время выпуска `iat` и время истечения срока действия токена `exp` — через 10 часов от текущего момента.
-
-   5.3. Токен подписывается методом `signWith`. Используется алгоритм шифрования `SignatureAlgorithm.HS256` и секретный ключ `Secret Key`, определенный в конфигурации сервиса.
+4. `DispatcherServlet` вызывает метод `login(loginRequestDTO)` в `AuthController`.
 
 
-6. `AuthController` упаковывает сгенерированную строку `JWT` в объект `LoginResponseDTO`. Перед отправкой HTTP-ответа выполняется сериализация объекта `LoginResponseDTO` в формат JSON. 
+5. `AuthController` вызывает метод `authenticate(loginRequestDTO)` в `AuthService`.
 
 
-7. `auth-service` через `AuthController`  возвращет ответ клиенту `200 OK + JSON Body`.
+6. `AuthService` через `UserService` вызывает метод `findByEmail(email)`, который обращается к `UserRepository`. `Hibernate` формирует и выполняет SQL-запрос к таблице `users` базы данных `auth_db`: `SELECT * FROM users WHERE email = ?`. Если запись не найдена — `UserRepository` возвращает `Optional.empty()`, `AuthService` возвращает `Optional.empty()`, `AuthController` возвращает HTTP статус-код `401 UNAUTHORIZED`.
 
-Если в процессе выполнения метода возникает критический сбой\необработанные исключения, не связанный с данными токена (например, ошибка конфигурации секретного ключа или нехватка памяти сервера) — `auth-service` через `AuthController` возвращает статус-код `500 INTERNAL SERVER ERROR`.
+
+7. `AuthService` верифицирует пароль. Из найденного объекта `User` извлекается хеш пароля (поле password) и передаётся вместе с сырым паролем из `LoginRequestDTO` в метод `passwordEncoder.matches(rawPassword, hashedPassword) `компонента `BCryptPasswordEncoder`. Алгоритм `BCrypt` извлекает соль из хеша, применяет её к сырому паролю и выполняет побитовое сравнение. Если результаты не совпадают — `matches()` возвращает `false`, `AuthService` возвращает `Optional.empty()`, `AuthController` возвращает HTTP статус-код `401 UNAUTHORIZED`. Если поле `password` в `LoginRequestDTO` имеет значение `null` — `BCryptPasswordEncoder.matches()` выбрасывает `IllegalArgumentException`, `AuthController` возвращает HTTP статус-код `500 INTERNAL SERVER ERROR`.
+
+
+8. `AuthService` вызывает метод `jwtUtil.generateToken(email, role)`. `JwtUtil` с помощью библиотеки `JJWT` собирает токен: в `Payload` записывается `email` пользователя как `sub` и его роль как пользовательский Claim `role`. Устанавливается время выпуска `iat` и время истечения `exp` — через 10 часов от текущего момента. Токен подписывается методом `signWith(secretKey)` — алгоритм подписи `HS256` определяется автоматически библиотекой `JJWT` на основе типа ключа. Возвращается готовая JWT-строка.
+
+
+9. `AuthService` возвращает `Optional<String>` с JWT-токеном в `AuthController`.
+
+
+10. `AuthController` оборачивает токен в объект `LoginResponseDTO` и передаёт в `DispatcherServlet`.
+
+
+11. `Jackson` выполняет сериализацию `LoginResponseDTO` в JSON.
+
+
+12. `DispatcherServlet` записывает JSON в тело ответа и отправляет клиенту со статусом `200 OK`.
+
+Если в процессе выполнения алгоритма возникает критический сбой — необработанное исключение, не связанное с данными пользователя (например, недоступность БД или ошибка конфигурации секретного ключа) — `auth-service` возвращает HTTP статус-код `500 INTERNAL SERVER ERROR`.
+
+![POST.login.svg](..%2FDiagrams%2FPOST.login.svg)
 
 ---
-![POST.login.svg](..%2FDiagrams%2FPOST.login.svg)
+
+## Логирование
+
+| Шаг в алгоритме       | Уровень | Класс | Сообщение                                   |
+|:----------------------|:--------|:----|:--------------------------------------------|
+|-|-|-| Логирование в данном методе не предусмотрено|

@@ -23,126 +23,86 @@ queue "Kafka" as KF #FADBD8
 
 group #LightCyan Процесс создания пациента\nВнешний URL: POST {gateway-host}/api/patients → Внутренний URL: POST patient-service:4000/patients
 
-    AC -> DS: **[1]** POST /patients (JSON)
-    activate DS
+    AC -> DS ++: **[1]** POST /patients (JSON)
 
-    DS -> Jackson: **[2]** Десериализация (JSON -> DTO)
-    activate Jackson
-    Jackson --> DS: **[3]** PatientRequestDTO\n(dateOfBirth, registeredDate — как строки, без проверки формата)
-    deactivate Jackson
+    DS -> Jackson ++: **[2]** Десериализация (JSON -> DTO)
+    Jackson --> DS --: **[3]** PatientRequestDTO\n(dateOfBirth, registeredDate — как строки, без проверки формата)
 
     DS -> DS: **[4]** Валидация параметров PatientRequestDTO
     alt #MistyRose Ошибка валидации
-        DS -> GEH: <color:#red>MethodArgumentNotValidException</color>
-        activate GEH
+        DS -> GEH ++: <color:#red>MethodArgumentNotValidException</color>
         GEH --[#red]> AC: <color:#red>400 BAD REQUEST + message</color>
         deactivate GEH
-        deactivate DS
     end
 
-    DS -> Ctrl: **[5]** createPatient(patientRequestDTO)
-    activate Ctrl
-
-    Ctrl -> Service: **[6]** createPatient(patientRequestDTO)
-    activate Service
-
-    Service -> Repo: **[7]** existsByEmail(email)
-    activate Repo
-    Repo -> DB: SELECT count(*) FROM patient WHERE email = ?
-    activate DB
-    DB --> Repo: ResultSet
-    deactivate DB
+    DS -> Ctrl ++: **[5]** createPatient(patientRequestDTO)
+    Ctrl -> Service ++: **[6]** createPatient(patientRequestDTO)
+    Service -> Repo ++: **[7]** existsByEmail(email)
+    Repo -> DB ++: SELECT count(*) FROM patient WHERE email = ?
+    DB --> Repo --: ResultSet
 
     alt #MistyRose Email уже существует
-        Repo --> Service: true
-        deactivate Repo
-        Service -> GEH: <color:#red>throw EmailAlreadyExistsException</color>
-        activate GEH
+        Repo --[#red]> Service: true
+        Service -> GEH ++: <color:#red>throw EmailAlreadyExistsException</color>
         GEH --[#red]> AC: <color:#red>400 BAD REQUEST + "Email address already exists"</color>
         deactivate GEH
-        deactivate Service
-        deactivate Ctrl
-        deactivate DS
     end
-    Repo --> Service: false
-    deactivate Repo
 
-    Service -> Mapper: **[8]** toModel(patientRequestDTO)
-    activate Mapper
+    Repo --> Service --: false
+
+    Service -> Mapper ++: **[8]** toModel(patientRequestDTO)
     alt #MistyRose Неверный формат даты
         Mapper --[#red]> Service: <color:#red>DateTimeParseException</color>
-        deactivate Mapper
-        Service --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
-        deactivate Service
-        deactivate Ctrl
-        deactivate DS
+        Service --[#red]> Ctrl: <color:#red>DateTimeParseException</color>
+        Ctrl --[#red]> DS: <color:#red>DateTimeParseException</color>
+        DS --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
     end
-    Mapper --> Service: Patient Entity
-    deactivate Mapper
+    Mapper --> Service --: Patient Entity
 
-    Service -> Repo: **[9]** save(Patient)
-    activate Repo
-    Repo -> DB: INSERT INTO patient\n(id, name, email, address, date_of_birth, registered_date)\nVALUES (?, ?, ?, ?, ?, ?)
-    activate DB
-    DB --> Repo: Success
-    deactivate DB
+    Service -> Repo ++: **[9]** save(Patient)
+    Repo -> DB ++: INSERT INTO patient\n(id, name, email, address, date_of_birth, registered_date)\nVALUES (?, ?, ?, ?, ?, ?)
+    DB --> Repo --: Success
     note right of DB: **COMMIT**\nUUID генерируется Hibernate
-    Repo --> Service: Saved Entity
-    deactivate Repo
+    Repo --> Service --: Saved Entity
 
-    Service -> Grpc: **[10]** createBillingAccount(patientId, name, email)
-    activate Grpc
-    Grpc -> BS: **[11]** gRPC createBillingAccount(BillingRequest)
-    activate BS
+    Service -> Grpc ++: **[10]** createBillingAccount(patientId, name, email)
+    Grpc -> BS ++: **[11]** gRPC createBillingAccount(BillingRequest)
     BS -> BS: **[12]** Обработка запроса (Mock)
+
     alt #MistyRose Ошибка gRPC (Рассинхрон)
         BS --[#red]> Grpc: <color:#red>StatusRuntimeException</color>
-        deactivate BS
-        Grpc --[#red]> GEH: <color:#red>throw Exception</color>
-        deactivate Grpc
-        activate GEH
+        Grpc --[#red]> GEH ++: <color:#red>throw Exception</color>
         note right of GEH: Запись в patient_db уже зафиксирована (COMMIT).\nПациент создан, счёт в BillingService не открыт.\nРассинхрон данных.
         GEH --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
         deactivate GEH
-        deactivate Service
-        deactivate Ctrl
-        deactivate DS
     end
-    BS --[#green]> Grpc: BillingResponse\n{accountId: "12345", status: "ACTIVE"}
-    deactivate BS
-    Grpc --[#green]> Service: Response OK
-    deactivate Grpc
 
-    Service -> Kafka: **[13]** sendEvent(newPatient)
-    activate Kafka
-    Kafka -> KF: **[14]** Serialize & Send\nPatientEvent (PATIENT_CREATED, Protobuf)
-    activate KF
+    BS --[#green]> Grpc --: BillingResponse\n{accountId: "12345", status: "ACTIVE"}
+    Grpc --[#green]> Service --: Response OK
+
+    Service -> Kafka ++: **[13]** sendEvent(newPatient)
+    Kafka -> KF ++: **[14]** Serialize & Send\nPatientEvent (PATIENT_CREATED, Protobuf)
     alt #MistyRose Ошибка Kafka (Silent Data Loss)
         KF --[#red]> Kafka: <color:#red>Exception</color>
         note right of Kafka: Перехватывается внутри KafkaProducer.\nЗаписывается ERROR в лог.\nВыполнение продолжается.\nСообщение в Kafka потеряно (Data Inconsistency).\nКлиент получит 200 OK.
     end
-    KF --[#green]> Kafka: Ack
-    deactivate KF
-    Kafka --[#green]> Service: Success
+    KF --[#green]> Kafka --: Ack
+    Kafka --[#green]> Service --: Success
+
+    Service -> Mapper ++: **[15]** toDTO(Saved Entity)
+    Mapper --> Service --: PatientResponseDTO
+
+    Service --[#green]> Ctrl --: **[16]** ResponseEntity.ok(PatientResponseDTO)
+    Ctrl --[#green]> DS --: ResponseEntity
+
+    DS -> Jackson ++: **[17]** Сериализация (DTO -> JSON)
+    Jackson --> DS --: JSON
+
+    DS --[#green]> AC --: **[18]** 200 OK (JSON)
+    deactivate Repo
+    deactivate Mapper
+    deactivate Grpc
     deactivate Kafka
 
-    Service -> Mapper: **[15]** toDTO(Saved Entity)
-    activate Mapper
-    Mapper --> Service: PatientResponseDTO
-    deactivate Mapper
-
-    Service --[#green]> Ctrl: **[16]** ResponseEntity.ok(PatientResponseDTO)
-    deactivate Service
-
-    Ctrl --[#green]> DS: ResponseEntity
-    deactivate Ctrl
-
-    DS -> Jackson: **[17]** Сериализация (DTO -> JSON)
-    activate Jackson
-    Jackson --> DS: JSON
-    deactivate Jackson
-
-    DS --[#green]> AC: **[18]** 200 OK (JSON)
-    deactivate DS
 end
 @enduml

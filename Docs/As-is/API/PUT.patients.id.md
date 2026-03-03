@@ -1,7 +1,7 @@
 # Endpoint `PUT /patients/{id}`
 
-### Общая информация
-**Назначение:** Метод предназначен для изменении данных у существующего пациента в системе.
+## Общая информация
+**Назначение:** Метод предназначен для изменения данных у существующего пациента в системе.
 
 **Метод:** `PUT`
 
@@ -11,7 +11,7 @@
 
 ---
 
-### Входные и выходные параметры
+## Входные и выходные параметры
 <details>
 <summary><b><font color="#2196F3">Входные параметры</font></b></summary>
 
@@ -56,7 +56,7 @@ Body (JSON):
 ## Примеры запроса и ответа
 
 Запрос:
-~~~ 
+~~~ json
 curl -X PUT "/patients/{id}" \
 -H "Content-Type: application/json" \
 -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
@@ -64,12 +64,12 @@ curl -X PUT "/patients/{id}" \
   "name": "John Doe",
   "email": "john.doe@example.com",
   "address": "123 Main St, Springfield",
-  "dateOfBirth": "1985-06-15",
-}
+  "dateOfBirth": "1985-06-15"
+}'
 ~~~
 
 Ответ:
-~~~
+~~~json
 Response code : 200 OK
 Response body (json):
 {
@@ -80,36 +80,172 @@ Response body (json):
   "dateOfBirth": "1985-06-15"
 }
 ~~~
+<details>
+<summary><b><font color="#2196F3">Варианты возвращаемых HTTP статус кодов</font></b></summary>
 
+<table>
+  <thead>
+    <tr>
+      <th>Код</th>
+      <th>Статус</th>
+      <th>Сообщение (Body)</th>
+      <th>Описание</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>200</td>
+      <td>OK</td>
+      <td>JSON с данными пациента</td>
+      <td>Данные пациента успешно обновлены.</td>
+    </tr>
+    <tr>
+      <td rowspan="6">400</td>
+      <td rowspan="6">BAD REQUEST</td>
+      <td>"Name is required"</td>
+      <td>Поле name пустое или отсутствует.</td>
+    </tr>
+    <tr>
+      <td>"Name cannot exceed 100 characters"</td>
+      <td>Длина имени превышает 100 символов.</td>
+    </tr>
+    <tr>
+      <td>"Email is required"</td>
+      <td>Поле email пустое или отсутствует.</td>
+    </tr>
+    <tr>
+      <td>"Email should be valid"</td>
+      <td>Некорректный формат email.</td>
+    </tr>
+    <tr>
+      <td>"Address is required"</td>
+      <td>Поле address пустое или отсутствует.</td>
+    </tr>
+    <tr>
+      <td>"Date of birth is required"</td>
+      <td>Поле dateOfBirth пустое или отсутствует.</td>
+    </tr>
+    <tr>
+      <td rowspan="2">400</td>
+      <td rowspan="2">BAD REQUEST</td>
+      <td>"Patient not found"</td>
+      <td>Пациент с указанным id не найден.</td>
+    </tr>
+    <tr>
+      <td>"Email address already exists"</td>
+      <td>Пациент с таким email уже зарегистрирован.</td>
+    </tr>
+    <tr>
+      <td>500</td>
+      <td>INTERNAL SERVER ERROR</td>
+      <td>-</td>
+      <td>Неверный формат даты.</td>
+    </tr>
+  </tbody>
+</table>
+</details>
 
 ---
 ## Алгоритм работы
 
-1. `patient-service` через `PatientController` получает входящий запрос `PUT  /patients/{id}` с объектом `PatientRequestDTO`, валидирует входные параметры:
-    <details style="font-weight: normal;">
-      <summary style="cursor: pointer; color: #2196F3; font-weight: normal;">
-        Валидация параметров
-      </summary>
-      <div style="font-weight: normal;">
-
-   | Параметр | Результат |
-          |:---|:---|
-   | name | Ошибка валидации: параметр пустой или передан как null.<br>`400 BAD REQUEST message: "Name is required"`<br><br>Ошибка валидации: длина имени превышает 100 символов.<br>`400 BAD REQUEST message: "Name cannot exceed 100 characters"` |
-   | email | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Email is required"`<br><br>Ошибка валидации: строка не соответствует формату адреса электронной почты.<br>`400 BAD REQUEST message: "Email should be valid"` |
-   | address | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Address is required"` |
-   | dateOfBirth | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Date of birth is required"` |
-
-      </div>
-    </details>
-
-   В случае ошибки валидации `GlobalExceptionHandler` перехватывает ошибку и отправляет ответ клиенту.
+1. `patient-service` через `DispatcherServlet` принимает входящий HTTP-запрос `PUT /patients/{id}`.
 
 
-2. `PatientService` парсит поле `dateOfBirth` в объект `LocalDate`, если формат даты в строке не соответствует `ISO_LOCAL_DATE (YYYY-MM-DD)` - сервис возвращет HTTP статус код `500 INTERNAL SERVER ERROR`.
+2. `DispatcherServlet` передаёт входящий JSON в библиотеку `Jackson` для десериализации.
 
 
-3. `PatientService` через `PatientRepository` обновляет данные в базе данных `patient_db` в таблице `patient`. Если запись в базе данных не найдена по `id` - сервис возвращает HTTP статус-код `404 NOT FOUND`.
+3. `Jackson` десериализует тело запроса из JSON в объект `PatientRequestDTO` и возвращает в `DispatcherServlet`. Параметр `dateOfBirth` десериализуется как строка без проверки формата (проверка формата на шаге 8).
 
 
-4. `Patient Service` возвращает ответ `200 OK + JSON` через `API Gateway` на клиент. 
+4. `DispatcherServlet` валидирует параметры объекта `PatientRequestDTO`:
+<details style="font-weight: normal;">
+  <summary style="cursor: pointer; color: #2196F3; font-weight: normal;">
+    Валидация параметров
+  </summary>
+  <div style="font-weight: normal;">
+  <table>
+    <thead>
+      <tr>
+        <th>Параметр</th>
+        <th>Условие</th>
+        <th>Сообщение</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td rowspan="2"><b>name</b></td>
+        <td>Пустое или null</td>
+        <td><code>"Name is required"</code></td>
+      </tr>
+      <tr>
+        <td>Длина > 100 символов</td>
+        <td><code>"Name cannot exceed 100 characters"</code></td>
+      </tr>
+      <tr>
+        <td rowspan="2"><b>email</b></td>
+        <td>Пустое или null</td>
+        <td><code>"Email is required"</code></td>
+      </tr>
+      <tr>
+        <td>Некорректный формат</td>
+        <td><code>"Email should be valid"</code></td>
+      </tr>
+      <tr>
+        <td><b>address</b></td>
+        <td>Пустое или null</td>
+        <td><code>"Address is required"</code></td>
+      </tr>
+      <tr>
+        <td><b>dateOfBirth</b></td>
+        <td>Пустое или null</td>
+        <td><code>"Date of birth is required"</code></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</details>
 
+> **Важно:** Поле `registeredDate` не валидируется при обновлении — в `PatientController` используется `@Validated({Default.class})` без `CreatePatientValidationGroup`.
+
+В случае ошибки валидации `GlobalExceptionHandler` перехватывает `MethodArgumentNotValidException` и возвращает клиенту HTTP статус-код `400 BAD REQUEST + message`.
+
+
+5. `DispatcherServlet` при успешной валидации вызывает метод `updatePatient(id, patientRequestDTO)` в `PatientController`.
+
+
+6. `PatientController` вызывает метод `updatePatient(id, patientRequestDTO)` в `PatientService`.
+
+
+7. `PatientService` выполняет поиск пациента по `id`, вызывая `patientRepository.findById(id)`. `Hibernate` выполняет SQL-запрос к таблице `patient` базы данных `patient_db`: `SELECT * FROM patient WHERE id = ?`. Если запись не найдена — выбрасывается `PatientNotFoundException`, `GlobalExceptionHandler` перехватывает исключение и возвращает клиенту HTTP статус-код `400 BAD REQUEST, message: "Patient not found"`.
+
+
+8. `PatientService` выполняет проверку уникальности `email`, вызывая `patientRepository.existsByEmailAndIdNot(email, id)`. Это исключает из проверки самого пациента (допускает сохранение того же email). SQL-запрос: `SELECT count(*) FROM patient WHERE email = ? AND id != ?`. Если такой `email` уже существует у другого пациента — выбрасывается `EmailAlreadyExistsException`, `GlobalExceptionHandler` перехватывает исключение и возвращает клиенту HTTP статус-код `400 BAD REQUEST, message: "Email address already exists"`.
+
+
+9. `PatientService` обновляет поля сущности `Patient`: `name`, `address`, `email`, и парсит `dateOfBirth` через `LocalDate.parse(patientRequestDTO.getDateOfBirth())`. Если строка не соответствует формату `ISO_LOCAL_DATE (YYYY-MM-DD)` — выбрасывается `DateTimeParseException`, `GlobalExceptionHandler` не перехватывает это исключение — клиенту возвращается HTTP статус-код `500 INTERNAL SERVER ERROR`.
+
+> **Важно:** При `DateTimeParseException` изменения не сохраняются в БД — метод `patientRepository.save()` не был вызван.
+
+10. `PatientRepository` сохраняет обновлённую сущность в базу данных `patient_db`. `Hibernate` запрашивает соединение у пула `HikariCP` и выполняет SQL-запрос `UPDATE patient SET name = ?, address = ?, email = ?, date_of_birth = ? WHERE id = ?`.
+
+
+11. `PatientMapper` мапит обновлённую сущность в объект `PatientResponseDTO`.
+
+
+12. `PatientController` оборачивает DTO в `ResponseEntity.ok()` и возвращает в `DispatcherServlet`.
+
+
+13. `Jackson` выполняет сериализацию объекта в JSON.
+
+
+14. `DispatcherServlet` записывает JSON в тело ответа и отправляет клиенту со статусом `200 OK`.
+
+
+---
+
+## Логирование
+
+| Шаг в алгоритме | Уровень | Класс                      | Сообщение                                   |
+|:----------------|:--------|:---------------------------|:--------------------------------------------|
+| 7               | WARN    | GlobalExceptionHandler     | Patient not found {message}|
+| 8               | WARN    | GlobalExceptionHandler                           | Email address already exist {message}|

@@ -6,69 +6,84 @@ skinparam MaxMessageSize 250
 boundary "API Consumer" as AC #FEF9E7
 
 box "auth-service" #5D6D7E
-    participant "AuthController" as Ctrl
-    participant "AuthService" as Service
-    participant "UserService" as USrv
-    participant "BCrypt/JJWT" as Utils
+    participant "DispatcherServlet" as DS #White
+    participant "Jackson" as Jackson #White
+    participant "AuthController" as Ctrl #White
+    participant "AuthService" as Service #White
+    participant "UserService" as USrv #White
+    participant "UserRepository" as Repo #White
+    participant "BCryptPasswordEncoder" as BCrypt #White
+    participant "JwtUtil" as Jwt #White
 end box
 
-database "Database (auth_db)" as DB #EAFAF1
+database "auth_db" as DB #LightBlue
 
-group #LightCyan Процесс аутентификации (POST /login)
-    AC -> Ctrl: POST /login (LoginRequestDTO)
-    activate Ctrl
+group #LightCyan Процесс аутентификации\nВнешний URL: POST {gateway-host}/auth/login → Внутренний URL: POST auth-service:4005/login
 
-    Ctrl -> Ctrl: **[1]** Валидация DTO (@Valid)
+    AC -> DS ++: **[1]** POST /login (JSON)
+    DS -> Jackson ++: **[2]** Десериализация (JSON -> DTO)
+    Jackson --> DS --: **[3]** LoginRequestDTO
 
-    alt #MistyRose Входные параметры невалидны
-        Ctrl --[#red]> AC: <color:#red>400 BAD REQUEST</color>
-    else #LightCyan Входные параметры валидны
+    note over DS, Ctrl #FFF3CD: **Важно**: @Valid отсутствует в AuthController —\nвалидация полей LoginRequestDTO не выполняется.\nНекорректные или пустые значения передаются без проверки.
 
-        Ctrl -> Service: **[2]** authenticate(loginRequestDTO)
-        activate Service
+    DS -> Ctrl ++: **[4]** login(loginRequestDTO)
+    Ctrl -> Service ++: **[5]** authenticate(loginRequestDTO)
+    Service -> USrv ++: **[6]** findByEmail(email)
+    USrv -> Repo ++: findByEmail(email)
+    Repo -> DB ++: SELECT * FROM users WHERE email = ?
+    DB --> Repo --: ResultSet
 
-        Service -> USrv: **[3]** findByEmail(email)
-        activate USrv
-        USrv -> DB: SELECT FROM users
-        activate DB
-        DB --> USrv: user / null
-        deactivate DB
-        USrv --> Service: Optional<User>
-        deactivate USrv
-
-        alt #MistyRose Пользователь не найден
-            Service --[#red]>  Ctrl: <color:#red>Optional.empty()</color>
-            Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
-        else #LightCyan Запись найдена
-
-            Service -> Utils: **[4]** matches(raw, hash)
-            activate Utils
-
-            alt #MistyRose Пароль и хэш не совпали
-                Utils --[#red]>  Service: <color:#red>false</color>
-                Service --[#red]>  Ctrl: <color:#red>Optional.empty()</color>
-                Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
-            else #LightGreen Пароль и хэш совпали
-                Utils --> Service: true
-
-                Service -> Utils: **[5]** generateToken(email, role)
-                Utils --> Service: JWT String
-                deactivate Utils
-
-                Service --> Ctrl: Optional<String> (token)
-                deactivate Service
-
-                Ctrl -> Ctrl: **[6]** Маппинг в LoginResponseDTO
-                Ctrl --> AC: **[7]** 200 OK (JSON Body)
-            end
-        end
+    alt #MistyRose Пользователь не найден
+        Repo --[#red]> USrv: Optional.empty()
+        USrv --[#red]> Service: Optional.empty()
+        Service --[#red]> Ctrl: Optional.empty()
+        Ctrl --[#red]> DS: <color:#red>401 UNAUTHORIZED</color>
+        DS --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
     end
+
+    Repo --> USrv --: Optional<User>
+    USrv --> Service --: Optional<User>
+
+    Service -> BCrypt ++: **[7]** matches(rawPassword, hashedPassword)
+
+    alt #MistyRose password == null
+         BCrypt --[#red]> Service: <color:#red>IllegalArgumentException (password is null)</color>
+                Service --[#red]> Ctrl: <color:#red>IllegalArgumentException</color>
+                Ctrl --[#red]> DS: <color:#red>IllegalArgumentException</color>
+                DS --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+    end
+
+    alt #MistyRose Пароль не совпал
+        BCrypt --[#red]> Service: false
+        Service --[#red]> Ctrl: Optional.empty()
+        Ctrl --[#red]> DS: <color:#red>401 UNAUTHORIZED</color>
+        DS --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+    end
+
+    BCrypt --[#green]> Service --: true
+
+    Service -> Jwt ++: **[8]** generateToken(email, role)
+    note right of Jwt: Payload: sub=email, role=role\niat=now, exp=now+10h\nsignWith(secretKey) → HS256
+    Jwt --[#green]> Service --: JWT String
+
+    Service --[#green]> Ctrl --: **[9]** Optional<String> (token)
+
+    Ctrl -> Ctrl: **[10]** new LoginResponseDTO(token)
+    Ctrl --> DS: LoginResponseDTO
+
+    DS -> Jackson ++: **[11]** Сериализация (DTO -> JSON)
+    Jackson --> DS --: JSON
+
+    DS --[#green]> AC --: **[12]** 200 OK (JSON)
+    deactivate Ctrl
+    deactivate USrv
+    deactivate Repo
+    deactivate BCrypt
+
 end
 
 group #WhiteSmoke Системные сбои
-    Service --[#red]> Ctrl: <color:#red>Exception (Critical Error)</color>
-    Ctrl --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+    note over DS, DB #FFE4E1: Критический сбой — необработанное исключение\n(недоступность БД, ошибка конфигурации секретного ключа)\n→ 500 INTERNAL SERVER ERROR
 end
 
-deactivate Ctrl
 @enduml
