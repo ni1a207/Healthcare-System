@@ -7,19 +7,18 @@
 ---
 ## Структура репозитория
 * **Docs** — артефакты системного и бизнес-анализа
-  * As is — текущее состояние системы **[In Progress]**
+  * As is **[In Progress]** — текущее состояние системы 
     * API — интеграционные интерфейсы системы
     * Diagrams — C4, SQD, BPMN
     * Services — информация о сервисах
     * **[Healthcare.md](Docs%2FAs%20is%2FHealthcare.md)** - Техническая спецификация о системе (с включением всего содержимого из вспомогательных папок выше)
-  * To be — проектирование целевого состояния (UI-прототипы + ТЗ). **[To Do]**
+  * To be  **[To Do]** — проектирование целевого состояния (UI-прототипы + ТЗ).
 * **Java** — Исходный код (Backend). Базовый проект: java-spring-microservices
 
 ---
 
 ## Архитектура системы (C4 Container Diagram)
-![HealthcareC4.svg](Docs%2FAs%20is%2FDiagrams%2FHealthcareC4.svg)
-
+![HealthcareC4.svg](Docs%2FAs-is%2FDiagrams%2FHealthcareC4.svg)
 ---
 
 ## Цель проекта
