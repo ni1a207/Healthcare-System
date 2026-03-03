@@ -84,14 +84,6 @@ Header:
       <td>1985-06-15</td>
       <td>patient.date_of_birth</td>
     </tr>
-     <tr>
-      <td></td>
-      <td>registeredDate</td>
-      <td>string (date)</td>
-      <td>Дата регистрации</td>
-      <td>2025-12-20</td>
-      <td>patient.registered_date</td>
-    </tr>		
   </tbody>
 </table></details> 
 
@@ -116,16 +108,14 @@ Response body (json):
     "name": "John Doe",
     "email": "john.doe@example.com",
     "address": "123 Main St, Springfield",
-    "dateOfBirth": "1985-06-15",
-    "registeredDate": "2025-12-10"
+    "dateOfBirth": "1985-06-15"
   },
   {
     "id": "6ff9700a-040a-4119-a7a9-f6662122e423",
     "name": "Иван Иванов",
     "email": "ivan@mail.com",
     "address": "г. Москва, ул. Ленина",
-    "dateOfBirth": "1990-05-15",
-    "registeredDate": "2025-12-10"
+    "dateOfBirth": "1990-05-15"
   }
 ]
 ~~~

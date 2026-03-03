@@ -7,7 +7,7 @@
 
 **Внутренний URL:** `http://patient-service:4000/patients/{id}`
 
-**Внешний URL:** `http://{gateway-host}/api/patients{id}`
+**Внешний URL:** `http://{gateway-host}/api/patients/{id}`
 
 ---
 
@@ -41,7 +41,7 @@ curl -X DELETE "/patients/{id}" \
 
 Ответ:
 ~~~
-Response code : 200 OK
+Response code : 204 NO CONTENT
 Response body (json):
 {
 }
@@ -54,9 +54,9 @@ Response body (json):
 1. `patient-service` через `PatientController` получает входящий запрос `DELETE  /patients/{id}` 
 
 
-2. `PatientService` через `PatientRepository` удаляет данные в базе данных `patient_db` из таблицы `patient`. Если запись в базе данных не найдена по `id` - сервис возвращает HTTP статус-код `404 NOT FOUND`.
+2. `PatientService` через `PatientRepository` удаляет данные в базе данных `patient_db` из таблицы `patient`. 
 
 
-3. `Patient Service` возвращает ответ `200 OK` на клиент. 
+3. `Patient Service` возвращает ответ `204 NO CONTENT` на клиент. 
 
 ![DELETE.patients.id.svg](..%2FDiagrams%2FDELETE.patients.id.svg)

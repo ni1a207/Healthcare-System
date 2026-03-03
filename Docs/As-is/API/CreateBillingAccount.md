@@ -132,4 +132,3 @@ grpc-message: ""
 > **Важно**: Текущая реализация сервиса является заглушкой (mock). Сохранение данных в базу данных и реальная генерация ID аккаунта не выполняются. 
 
 
-![CreateBillingAccount.svg](..%2FDiagrams%2FCreateBillingAccount.svg)

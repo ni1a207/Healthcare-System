@@ -7,7 +7,7 @@
 
 **Внутренний URL:** `http://patient-service:4000/patients/{id}`
 
-**Внешний URL:** `http://{gateway-host}/api/patients{id}`
+**Внешний URL:** `http://{gateway-host}/api/patients/{id}`
 
 ---
 
@@ -98,7 +98,6 @@ Response body (json):
    | email | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Email is required"`<br><br>Ошибка валидации: строка не соответствует формату адреса электронной почты.<br>`400 BAD REQUEST message: "Email should be valid"` |
    | address | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Address is required"` |
    | dateOfBirth | Ошибка валидации: поле пустует или передано как null.<br>`400 BAD REQUEST message: "Date of birth is required"` |
-   | registeredDate | Ошибка валидации: поле отсутствует или передано пустым при создании записи.<br>`400 BAD REQUEST message: "Registered date is required"` |
 
       </div>
     </details>

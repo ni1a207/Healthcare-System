@@ -34,7 +34,8 @@
 1. Триггер: Получение массива байтов (`byte[]`) из Kafka.
 
 
-2. Десериализация: Вызов метода `PatientEvent.parseFrom(event)`, библиотека `protobuf-java` преобразует бинарные данные в Java-объект.
+2. Десериализация: Вызов метода `PatientEvent.parseFrom(event)`, библиотека `protobuf-java` преобразует бинарные данные в Java-объект. 
+
 
 
 3. Извлечение данных: Из объекта `patientEvent` извлекаются поля `patientId`, `name` и `email`.
@@ -43,24 +44,23 @@
 4. Логирование: С помощью `SLF4J` выполняется запись в лог уровня INFO: 
 
 
-5. Фиксация смещения (Ack): После завершения метода consumeEvent (независимо от успеха десериализации, так как исключение поймано), сервис автоматически подтверждает обработку сообщения (Auto-commit), сдвигая offset в Kafka.
+5. Фиксация смещения (Ack): После завершения метода consumeEvent, сервис автоматически подтверждает обработку сообщения (Auto-commit), сдвигая offset в Kafka.
    
 
     INFO [имя_потока] com.pm.analyticsservice.kafka.KafkaConsumer - Received Patient Event: [PatientId=550e8400-e29b-41d4-a716-446655440000, PatientName=John Doe, PatientEmail=john.doe@example.com]
 
-### Обработка исключительных ситуаций
+## Обработка исключительных ситуаций
 
-**В топик поступило сообщение, не соответствующее схеме `PatientEvent` / поврежденные данные**
+### **В топик поступило сообщение, не соответствующее схеме `PatientEvent` / поврежденные данные / ошибка десериализации**
 
-1. Выбрасывается исключение `InvalidProtocolBufferException`. Ошибка записывается в лог приложения: `Error deserializing event {message}`.
+1. Выбрасывается исключение `InvalidProtocolBufferException`, исключение перехватывается catch-блоком. Ошибка записывается в лог приложения: `Error deserializing event {message}`.
 
 
     ERROR [имя_потока] c.p.a.k.KafkaConsumer - Error deserializing event
     [Stacktrace: com.google.protobuf.InvalidProtocolBufferException: <Причина ошибки>]
 
 
-2. Сообщение считается обработанным с ошибкой, выполнение метода завершается.
-
+2. Метод `consumeEvent` завершается нормально. Поскольку AckMode явно не настроен, Spring Kafka выполняет авто-коммит offset — сообщение считается обработанным и безвозвратно теряется (DLQ не настроен).
 
 
 > **Важно**: Текущая реализация не сохраняет данные в базу данных и не выполняет агрегацию метрик. Ключ сообщения (Kafka Key) сервисом не обрабатывается.

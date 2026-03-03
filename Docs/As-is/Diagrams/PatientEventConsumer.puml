@@ -29,7 +29,7 @@ group #LightCyan Алгоритм обработки (consumeEvent)
         Consumer -[#green]> Consumer : <color:#green>log.info("Received Patient Event: [...]")</color>
         note right: Вывод данных пациента в консоль
 
-    else #MistyRose Неверный формат / данные повреждены
+    else #MistyRose Неверный формат / данные повреждены / ошибка десериализация
         Proto --[#red]> Consumer : <color:#red>throw InvalidProtocolBufferException</color>
         deactivate Proto
 

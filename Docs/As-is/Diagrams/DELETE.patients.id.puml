@@ -5,7 +5,7 @@ skinparam MaxMessageSize 250
 
 boundary "API Consumer" as ac #FEF9E7
 
-box "auth-service" #5D6D7E
+box "patient-service" #5D6D7E
     participant "PatientController" as pc
     participant "PatientService" as ps
     participant "PatientRepository" as pr
@@ -28,7 +28,7 @@ db--
 pr-->ps: Response
 pr--
 ps-->pc: Response
-pc-->ac:200OK
+pc-->ac:204 NO CONTENT
 pc--
 
 
