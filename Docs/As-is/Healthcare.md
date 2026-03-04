@@ -11,9 +11,10 @@
 
 <details>
 <summary><b><font color="#2196F3">Аутентификация</font></b></summary>
+
 Процесс проверки личности пользователя и предоставления ему прав доступа к защищенным ресурсам системы. 
 
-1.  Пользователь вводит логин и пароль в форму для ввода, нажимает кнопку "Войти". `frontend` отправляет HTTP-запрос [POST api/auth/login](API%2FPOST.login.md) .
+1.  Пользователь вводит логин и пароль в форму для ввода, нажимает кнопку "Войти". `frontend` отправляет HTTP-запрос [POST api/auth/login](API%2FPOST.login.md) с телом запроса (JSON).
 2.  Запрос проксируется через `api-gateway` в `auth-service`.
 3. `auth-service` отправляет SQL-запрос к `auth-db`: выборка из таблицы `users`, где `email` совпадает со значением переменной `email`, которую передал пользователь в JSON-объекте.
 4.  `auth-db` в таблице `users` находит запись и возвращает данные.
@@ -30,9 +31,10 @@
 <details>
 
 <summary><b><font color="#2196F3">Авторизация и маршрутизация</font></b></summary>
-Проверка прав доступа к запрашиваемому ресурсу.
 
-1. Пользователь делает запрос к системе. `frontend` отправляет все запросы на сервер через `api-gateway`.
+Процесс проверки прав доступа к запрашиваемому ресурсу.
+
+1. Пользователь делает запрос к системе. `frontend` отправляет все запросы на сервер через `api-gateway` с заголовком `Authorization: Bearer <token>`.
 2. `api-gateway` анализирует URL запроса и ищет совпадение в `application.yml`. Если для найденного маршрута в списке `filters` указан - `JwtValidation`, активируется проверка `JWT`.
 3. `api-gateway` проверяет заголовок `Authorization`.
 4. `api-gateway` отправляет HTTP-запрос [GET /validate](API%2FGET.validate.md) с заголовком `Authorization`  в `auth-service`.
@@ -53,7 +55,7 @@
 
 Процесс создания новой учетной записи пациента в системе. Выполняется администратором клиники.
 
-1. Пользователь вводит данные в форму и нажимает кнопку "Зарегистрировать". `frontend` отправляет HTTP-запрос [POST api/patients](API%2FPOST.patients.md).
+1. Пользователь вводит данные в форму и нажимает кнопку "Зарегистрировать". `frontend` отправляет HTTP-запрос [POST api/patients](API%2FPOST.patients.md) с заголовком `Authorization: Bearer <token>` и телом запроса (JSON).
 2. Запрос поступает в `api-gateway`, который инициирует валидацию `JWT`, отправляет HTTP-запрос [GET /validate](API%2FGET.validate.md) в `auth-service`.
 3. `api-gateway` проксирует запрос в `patient-service`.
 4. `patient-service` получает запрос, валидирует входные параметры. 
@@ -74,7 +76,9 @@
 <details>
 <summary><b><font color="#2196F3">Просмотр зарегистрированных пациентов</font></b></summary>
 
-1. Пользователь нажимает кнопку "Все пациенты". `frontend` отправляет HTTP-запрос [GET api/patients](API%2FGET.patients.md).
+Процесс просмотра учетных записей пациентов в системе. Выполняется администратором клиники.
+
+1. Пользователь нажимает кнопку "Все пациенты". `frontend` отправляет HTTP-запрос [GET api/patients](API%2FGET.patients.md) с заголовком `Authorization: Bearer <token>`.
 2. Запрос поступает в `api-gateway`, который инициирует валидацию `JWT`, отправляет HTTP-запрос [GET /validate](API%2FGET.validate.md) в `auth-service`.
 3. `api-gateway` проксирует запрос в `patient-service`.
 4. `patient-service` достает все записи из базы данных `patient-db` таблицы `patient`.
@@ -88,6 +92,8 @@
 ---
 <details>
 <summary><b><font color="#2196F3">Изменение личных данных пациента</font></b></summary>
+
+Процесс обновления\изменения учетной записи пациента в системе. Выполняется администратором клиники.
 
 1. Пользователь вводит данные в форму, нажимает кнопку "Сохранить". `frontend` отправляет HTTP-запрос [PUT /api/patients/{id}](API%2FPUT.patients.id.md) с заголовком `Authorization: Bearer <token>` и телом запроса (JSON).
 2. Запрос поступает в `api-gateway`, который инициирует валидацию `JWT`, отправляет запрос [GET /validate](API%2FGET.validate.md) в `auth-service`.
@@ -103,6 +109,8 @@
 
 <details>
 <summary><b><font color="#2196F3">Удаление пациента </font></b></summary>
+
+Процесс удаления учетной записи пациента из системы. Выполняется администратором клиники.
 
 1. Пользователь в карточке пациента нажимает на кнопку "Удалить". `frontend` отправляет HTTP-запрос [DELETE /api/patients/{id}](API%2FDELETE.patients.id.md) с заголовком `Authorization: Bearer <token>`.
 2. Запрос поступает в `api-gateway`, который инициирует валидацию `JWT`, отправляет HTTP-запрос [GET /validate](API%2FGET.validate.md) в `auth-service`.
