@@ -19,7 +19,7 @@ API Gateway выступает единым прокси-слоем систем
 
 * **Класс-обработчик**: `JwtValidationGatewayFilterFactory`
 * **Название в конфиге**: `JwtValidation`
-* **Логика**: Наследуется от `AbstractGatewayFilterFactory`. Перехватывает входящий `ServerWebExchange`, извлекает JWT и выполняет реактивный запрос к `Auth Service` через `WebClient`. При отсутствии или некорректном заголовке фильтр напрямую устанавливает статус `401 UNAUTHORIZED` и завершает обработку запроса.
+* **Логика**: Наследуется от `AbstractGatewayFilterFactory`. Перехватывает входящий `ServerWebExchange`, извлекает JWT и выполняет реактивный запрос к `Auth Service` через `WebClient`. При отсутствии или некорректном заголовке фильтр напрямую устанавливает статус `401 UNAUTHORIZED` и завершает обработку запроса. Если токен не прошёл валидацию в `auth-service` и тот вернул `401 UNAUTHORIZED` — клиент получит `500 INTERNAL SERVER ERROR`, так как в текущей реализации отсутствует `.onStatus()` обработчик.
 
 
 Подробное описание этапов обработки запроса, включая коды ответов и условия валидации, приведено в разделе: ["Алгоритмы работы API Gateway"](..%2FAPI%2FAPIGateway.md).
@@ -29,7 +29,6 @@ API Gateway выступает единым прокси-слоем систем
 | :--- |:----------------------------|:-----------------------------------------------------|
 | **SERVER_PORT** | 4004                        | Порт шлюза                                           |
 | **AUTH_SERVICE_URL** | http://auth-service:4005    | Адрес для перенаправления запросов авторизации       |
-| **PATIENT_SERVICE_URL** | http://patient-service:4000 | Адрес для перенаправления запросов сервиса пациентов |
 
 ## Сетевые параметры
 | Параметр | Значение    | Описание |
@@ -41,12 +40,12 @@ API Gateway выступает единым прокси-слоем систем
 
 Шлюз использует статическую маршрутизацию. Имена хостов должны быть разрешимы на уровне сетевой инфраструктуры (Docker DNS).
 
-| Направление | Префикс пути | Целевой URI | Фильтры |
-| :--- | :--- | :--- | :--- |
-| **Auth Service** | `/auth/**` | `http://auth-service:4005` | `StripPrefix=1` |
-| **Patient Service** | `/api/patients/**` | `http://patient-service:4000` | `StripPrefix=1`, `JwtValidation` |
-| **Auth Docs** | `/api-docs/auth` | `http://auth-service:4005` | `RewritePath=/api-docs/auth, /v3/api-docs` |
-| **Patient Docs** | `/api-docs/patients` | `http://patient-service:4000` | `RewritePath=/api-docs/patients, /v3/api-docs` |
+| Направление | Префикс пути | Целевой URI | Фильтры                                       |
+| :--- | :--- | :--- |:----------------------------------------------|
+| **Auth Service** | `/auth/**` | `http://auth-service:4005` | `StripPrefix=1`                               |
+| **Patient Service** | `/api/patients/**` | `http://patient-service:4000` | `StripPrefix=1`, `JwtValidation`              |
+| **Auth Docs** | `/api-docs/auth` | `http://auth-service:4005` | `RewritePath=/api-docs/auth,/v3/api-docs`     |
+| **Patient Docs** | `/api-docs/patients` | `http://patient-service:4000` | `RewritePath=/api-docs/patients,/v3/api-docs` |
 
 ### Особенности конфигурации:
 

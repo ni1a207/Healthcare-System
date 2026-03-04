@@ -9,7 +9,7 @@
 
 ## Стек технологий
 * **Runtime**: Java 21 (OpenJDK).
-* **Framework**: Spring Boot 3.4.1 (Security, Data JPA, Validation).
+* **Framework**: Spring Boot 3.4.1 (Security, Data JPA).
 * **Token Management**: JJWT 0.12.6.
 * **Database**: PostgreSQL (Runtime), H2 (In-memory/Test).
 * **Build Tool**: Maven 3.9.9.
@@ -22,7 +22,7 @@
 **Шифрование паролей**: Используется BCrypt. Хранение осуществляется в виде хэшей.
 
 **JWT**:
-Алгоритм подписи: HMAC SHA (HS256). Ключ считывается из переменной ${jwt.secret}.
+Алгоритм подписи: HMAC SHA (алгоритм определяется длиной ключа, обычно HS256). Ключ считывается из переменной окружения JWT_SECRET.
 
 **Payload:**
 * **sub**: Email пользователя.
@@ -33,12 +33,13 @@
 **Контроль доступа**: Сервис настроен на permitAll(). Ограничение доступа к эндпоинтам авторизации не требуется, так как проверка прав и валидация токена реализованы внутри бизнес-логики (AuthService).
 
 ### Ролевая модель
-В сервисе реализована ролевая модель. Тип данных в JWT и БД — строка.
 
 | Роль | Область доступа |
 |:---|:---|
 | **USER** | Базовый доступ. |
 | **ADMIN** | Расширенный доступ (предусмотрен для тестового аккаунта в data.sql). |
+
+>**Важно:** Роли предусмотрены в модели, но контроль доступа по ролям не реализован
 
 ## База данных: [auth_db](..%2FDB%2Fauth_db.md)
 
@@ -54,14 +55,14 @@
 ### Application (auth-service)
 Параметры считываются из application.properties. Для работы с PostgreSQL и JWT необходима передача следующих переменных через окружение (Docker):
 
-| Переменная | Значение (по умолчанию) | Описание |
-| :--- |:---|:---|
-| **SERVER_PORT** | 4005 | Порт сервиса |
-| **SPRING_DATASOURCE_URL** | jdbc:postgresql://auth-service-db:5432/db | URL для подключения к PostgreSQL |
-| **SPRING_DATASOURCE_USERNAME** | admin_user | Имя пользователя базы данных |
-| **SPRING_DATASOURCE_PASSWORD** | password | Пароль пользователя базы данных |
+| Переменная | Значение (по умолчанию) | Описание                                    |
+| :--- |:---|:--------------------------------------------|
+| **SERVER_PORT** | 4005 | Порт сервиса                                |
+| **SPRING_DATASOURCE_URL** | jdbc:postgresql://auth-service-db:5432/db | URL для подключения к PostgreSQL            |
+| **SPRING_DATASOURCE_USERNAME** | admin_user | Имя пользователя базы данных                |
+| **SPRING_DATASOURCE_PASSWORD** | password | Пароль пользователя базы данных             |
 | **SPRING_JPA_HIBERNATE_DDL_AUTO** | update | Автоматическое обновление схемы базы данных |
-| **SPRING_SQL_INIT_MODE** | always | Выполнение data.sql при каждом запуске |
+| **SPRING_SQL_INIT_MODE** | always | Выполнение data.sql при каждом запуске -  нужно только для dev/test окружения   |
 | **JWT_SECRET** | - | Секретный ключ для подписи токенов (Base64) |
 
 ### Database (auth-service-db)
@@ -82,7 +83,7 @@
 ## Swagger
 Интерфейс доступен напрямую при обращении к сервису:
 
-| Интерфейс | URL | Описание |
-| :--- |:---|:---|
-| **Swagger UI** | /swagger-ui.html | UI документации |
-| **OpenAPI JSON** | /v3/api-docs | Спецификация API в формате JSON |
+| Интерфейс | URL                                                                     | Описание |
+| :--- |:------------------------------------------------------------------------|:---|
+| **Swagger UI** | /swagger-ui.html                                                        | UI документации |
+| **OpenAPI JSON** | /v3/api-docs<br/>(Через api-gateway: /api-docs/auth)                                                                        | Спецификация API в формате JSON |
