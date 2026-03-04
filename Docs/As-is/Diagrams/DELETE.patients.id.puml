@@ -3,33 +3,46 @@ skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
-boundary "API Consumer" as ac #FEF9E7
+boundary "API Consumer" as AC #FEF9E7
 
 box "patient-service" #5D6D7E
-    participant "PatientController" as pc
-    participant "PatientService" as ps
-    participant "PatientRepository" as pr
+    participant "DispatcherServlet" as DS #White
+    participant "PatientController" as Ctrl #White
+    participant "PatientService" as Service #White
+    participant "PatientRepository" as Repo #White
 end box
 
-database "Database (patient_db)" as db #EAFAF1
+database "patient_db" as DB #LightBlue
 
+group #LightCyan Процесс удаления пациента\nВнешний URL: DELETE {gateway-host}/api/patients/{id} → Внутренний URL: DELETE patient-service:4000/patients/{id}
 
-ac->pc++: DELETE /patients/{id}
-ac++
-pc->pc: обработка запроса
-pc->ps: deletePatient(@PathVariable UUID id)
-ps++
-ps->pr: deletePatient(@PathVariable UUID id)
-pr++
+    AC -> DS ++: **[1]** DELETE /patients/{id}
 
-pr->db++: JDBC (DELETE...)
-db-->pr: Response
-db--
-pr-->ps: Response
-pr--
-ps-->pc: Response
-pc-->ac:204 NO CONTENT
-pc--
+    DS -> Ctrl ++: **[2]** deletePatient(id)\n(@PathVariable UUID id)
 
+    Ctrl -> Service ++: **[3]** deletePatient(id)
 
+    Service -> Repo ++: **[4]** deleteById(id)\n(делегируется SimpleJpaRepository Proxy)
+
+    Repo -> DB ++: **[5]** DELETE FROM patient WHERE id = ?\n(Hibernate → HikariCP → JDBC Driver)
+
+    note right of DB: Если запись не найдена —\nзатронутых строк 0,\nисключение не выбрасывается.
+
+    alt #MistyRose Ошибка БД (недоступность / таймаут соединения)
+        DB --[#red]> Repo: <color:#red>SQLException</color>
+        Repo --[#red]> Service: <color:#red>DataAccessException</color>
+        Service --[#red]> Ctrl: <color:#red>DataAccessException</color>
+        Ctrl --[#red]> DS: <color:#red>DataAccessException</color>
+        DS --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+    end
+
+    DB --> Repo --: **[6]** rows affected
+
+    Repo --> Service --: void
+    Service --> Ctrl --: void
+
+    Ctrl --[#green]> DS --: **[7]** ResponseEntity.noContent()
+    DS --[#green]> AC --: **[8]** 204 NO CONTENT
+
+end
 @enduml

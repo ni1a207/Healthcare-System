@@ -1,6 +1,6 @@
 # Endpoint `GET /patients`
 
-### Общая информация
+## Общая информация
 **Назначение:** Метод предназначен для получения списка пациентов зарегистрированных в системе.
 
 **Метод:** `GET`
@@ -11,7 +11,7 @@
 
 ---
 
-### Входные и выходные параметры
+## Входные и выходные параметры
 <details>
 <summary><b><font color="#2196F3">Входные параметры</font></b></summary>
 
@@ -87,19 +87,19 @@ Header:
   </tbody>
 </table></details> 
 
+
 ---
 
 ## Примеры запроса и ответа
 
 Запрос:
-~~~ 
-curl -X GET "/patients" \
+~~~json
+curl -X GET "http://{gateway-host}/api/patients"\
 -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9..." \
-
 ~~~
 
 Ответ:
-~~~
+~~~json
 Response code : 200 OK
 Response body (json):
 [
@@ -120,52 +120,78 @@ Response body (json):
 ]
 ~~~
 
+<details>
+<summary><b><font color="#2196F3">Варианты возвращаемых HTTP статус кодов</font></b></summary>
+
+<table>
+  <thead>
+    <tr>
+      <th>Код</th>
+      <th>Статус</th>
+      <th>Сообщение (Body)</th>
+      <th>Описание</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>200</td>
+      <td>OK</td>
+      <td>JSON массив пациентов</td>
+      <td>Список пациентов успешно получен. Если пациентов нет — возвращается пустой массив [].</td>
+    </tr>
+    <tr>
+      <td>500</td>
+      <td>INTERNAL SERVER ERROR</td>
+      <td>-</td>
+      <td>Критический сбой — недоступность БД, ошибка соединения или непредвиденная системная ошибка.</td>
+    </tr>
+  </tbody>
+</table>
+</details>
 
 ---
 ## Алгоритм работы
 
-1. **`patient-service`** через **`DispatcherServlet`** получает входящий HTTP-запрос `GET /patients`. Запрос мапится на метод **`getPatients()`** в **`PatientController`**.
+1. `patient-service` через `DispatcherServlet` принимает входящий HTTP-запрос `GET /patients`.
 
 
-2. **`PatientController`** вызывает метод **`getPatients()`** в **`PatientService`**.
+2. `DispatcherServlet` вызывает метод `getPatients()` в `PatientController`.
 
 
-3. **`PatientService`** вызывает метод **`findAll()`** в **`PatientRepository`**.
+3. `PatientController` вызывает метод `getPatients()` в `PatientService`.
 
 
-4. **`PatientRepository`** передает управление реализации **`SimpleJpaRepository`** (Proxy), которая обеспечивает выполнение стандартной операции JPA.
+4. `PatientService` вызывает метод `findAll()` в `PatientRepository`. `PatientRepository` делегирует вызов реализации `SimpleJpaRepository` (Spring Data JPA Proxy).
 
 
-5. `Hibernate (JPA Provider)` генерирует SQL-запрос `SELECT * FROM patient`. Для его выполнения он запрашивает активное соединение у пула соединений `HikariCP`, который передает запрос через `JDBC Driver` в базу данных `patient_db`. При невозможности получить соединение от `HikariCP` или отказе базы данных, выполнение прерывается, и управление передается в `GlobalExceptionHandler`. Данный компонент перехватывает исключение, формирует структуру ошибки и возвращает клиенту `500 INTERNAL SERVER ERROR`.
+5. `Hibernate` формирует и выполняет SQL-запрос к таблице `patient` базы данных `patient_db`: `SELECT * FROM patient`. Для выполнения запроса `Hibernate` запрашивает соединение у пула `HikariCP`, который передаёт запрос через JDBC Driver в базу данных. Если соединение недоступно или база данных недоступна — выбрасывается исключение, которое пробрасывается по цепочке через `PatientRepository` → `PatientService` → `PatientController` — Spring Boot возвращает клиенту HTTP cтатус-код `500 INTERNAL SERVER ERROR`.
 
 
-6. **`patient_db`** выполняет запрос, возвращает результат в виде `ResultSet`.
+6. `patient_db` выполняет запрос и возвращает `ResultSet`.
 
 
-7. `Hibernate  (JPA Provider)` получает ответ от базы данных, выполняется процесс **`Hydration`** (маппинг строк `ResultSet` в поля Java-объектов сущности `Patient`).
+7. `Hibernate` выполняет `Hydration` — маппинг строк `ResultSet` в поля Java-объектов сущности `Patient`. `PatientRepository` возвращает `List<Patient>` в `PatientService`.
 
 
-8. **`PatientRepository`** возвращает полученный список сущностей **`List<Patient>`** в **`PatientService`**.
+8. `PatientService` обрабатывает список через Stream API, для каждого элемента вызывая `PatientMapper.toDTO(patient)`. Внутри `PatientMapper` поля сущности `Patient` копируются в объект `PatientResponseDTO`. Если в процессе маппинга возникает непредвиденное исключение — оно пробрасывается по цепочке через `PatientService` → `PatientController` — Spring Boot возвращает клиенту HTTP cтатус-код `500 INTERNAL SERVER ERROR`.
 
 
-9. **`PatientService`** обрабатывает список через **`Stream API`**, вызывая метод **`PatientMapper.toDTO(patient)`**.
+9. `PatientService` возвращает итоговый `List<PatientResponseDTO>` в `PatientController`.
 
 
-10. Внутри `PatientMapper` данные копируются в `PatientResponseDTO`. При возникновении исключения (например, RuntimeException из-за несоответствия типов данных) выполнение прерывается, и управление передается в `GlobalExceptionHandler`. Данный компонент перехватывает исключение, формирует структуру ошибки и возвращает клиенту `500 INTERNAL SERVER ERROR`.
+10. `PatientController` оборачивает список в `ResponseEntity.ok().body(patients)` и возвращает в `DispatcherServlet`.
 
 
-11. После успешной трансформации всех элементов **`PatientService`** возвращает итоговый **`List<PatientResponseDTO>`** в **`PatientController`**.
+11. `Jackson` выполняет сериализацию `List<PatientResponseDTO>` в JSON.
 
 
-12. **`PatientController`** формирует и возвращает объект **`ResponseEntity`** обратно в **`DispatcherServlet`**.
-
-
-13. **`DispatcherServlet`** передает список объектов в библиотеку **`Jackson`** для выполнения сериализации.
-
-
-14. **`Jackson`** возвращает готовую JSON-строку.
-
-
-15. **`DispatcherServlet`** записывает в тело ответа полученную JSON-строку и отправляет клиенту со статусом `200 OK`.
+12. `DispatcherServlet` записывает JSON в тело ответа и отправляет клиенту со статусом `200 OK`.
 
 ![GET.patients.svg](..%2FDiagrams%2FGET.patients.svg)
+
+---
+## Логирование
+
+| Шаг в алгоритме       | Уровень | Класс | Сообщение                                   |
+|:----------------------|:--------|:----|:--------------------------------------------|
+|-|-|-| Логирование в данном методе не предусмотрено|
