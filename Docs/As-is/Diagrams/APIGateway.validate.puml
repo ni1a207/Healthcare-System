@@ -2,83 +2,54 @@
 skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
-skinparam Style strictuml
 
 participant "Single Page Application" as SPA #LightBlue
 
-box "api-gateway"#5D6D7E
-    participant "Route Configuration" as RC #D5E8D4
-    participant "JwtValidation Filter" as Filter #FADBD8
-    participant "WebClient" as WC #D6EAF8
+box "api-gateway" #5D6D7E
+    participant "Route Configuration" as RC #White
+    participant "JwtValidationGateway\nFilterFactory" as Filter #White
+    participant "WebClient" as WC #White
 end box
 
 participant "auth-service" as Auth #EBF5FB
 participant "target-service" as TS #F4ECF7
 
-autonumber "<b>[0]</b>"
-autonumber stop
+group #LightCyan Проксирование к защищённым ресурсам\nПорт: 4004 → target-service (StripPrefix=1)
 
-group #LightCyan Проксирование к защищенным ресурсам
-    SPA -> RC: HTTP Request (порт 4004)
-    activate SPA
-    activate RC
+    SPA -> RC ++: **[1]** HTTP Request\n(Authorization: Bearer <token>)
+    RC -> RC: Поиск маршрута в application.yml\nJwtValidation filter FOUND
 
-autonumber resume
-    RC -> RC: Поиск маршрута:\nJwtValidation filter FOUND
+    RC -> Filter ++: **[2]** Передача управления фильтру
 
-    RC -> Filter: Передача управления фильтру
-    activate Filter
-
-    Filter -> Filter: Извлечение Bearer <token>
-
-    alt #MistyRose Токен отсутствует или неверный формат
-        autonumber stop
+    alt #MistyRose Заголовок отсутствует или нет префикса "Bearer "
         Filter --[#red]> SPA: <color:#red>401 UNAUTHORIZED</color>
-        autonumber resume
-    else #LightCyan Токен извлечен
-
-        Filter -> WC: Инициировать запрос к Auth
-        activate WC
-
-        WC -> Auth: GET /validate
-        activate Auth
-
-        alt #MistyRose Ошибка связи с Auth Service
-            autonumber stop
-            Auth --[#red]> WC: <color:#red>Connection Error</color>
-            WC --[#red]> SPA: <color:#red>500 INTERNAL SERVER ERROR</color>
-            autonumber resume
-        else #MistyRose Токен невалиден
-            autonumber stop
-            Auth --[#red]> WC: <color:#red>401 UNAUTHORIZED</color>
-            WC --[#red]> SPA: <color:#red>401 UNAUTHORIZED</color>
-            autonumber resume
-        else #LightCyan Токен валиден
-            Auth --> WC: 200 OK
-            deactivate Auth
-
-            WC --> Filter: Validation Success
-            deactivate WC
-
-            Filter -> TS: Proxy Request
-            activate TS
-
-            alt #MistyRose Целевой сервис недоступен
-                autonumber stop
-                TS --[#red]> Filter: <color:#red>Error / Timeout</color>
-                Filter --[#red]> SPA: <color:#red>500 INTERNAL SERVER ERROR</color>
-                autonumber resume
-            else #LightGreen Успешный ответ
-                TS --> Filter: HTTP Response
-                deactivate TS
-
-                Filter --> SPA: Proxy Response
-            end
-        end
     end
 
-    deactivate Filter
-    deactivate RC
-    deactivate SPA
+    Filter -> WC ++: **[3]** GET /validate\n(Authorization: Bearer <token>)
+    WC -> Auth ++: **[4]** GET /validate
+
+    alt #MistyRose auth-service недоступен или вернул не-2xx
+        Auth --[#red]> WC: <color:#red>WebClientResponseException</color>
+        WC --[#red]> Filter: <color:#red>WebClientResponseException</color>
+        Filter --[#red]> RC: <color:#red>500</color>
+        RC --[#red]> SPA: <color:#red>500 INTERNAL SERVER ERROR</color>
+        note over Filter #FFF3CD: **Важно**: отсутствует .onStatus() обработчик —\nпри 401 от auth-service клиент получит 500, не 401.
+    end
+
+    Auth --[#green]> WC --: **[5]** 200 OK
+    WC --[#green]> Filter --: Validation Success
+
+    Filter -> TS ++: **[6]** Proxy Request\n(/api/patients/... → /patients/... via StripPrefix=1)
+
+    alt #MistyRose Целевой сервис недоступен
+        TS --[#red]> Filter: <color:#red>Connection Refused / Timeout</color>
+        Filter --[#red]> RC: <color:#red>500</color>
+        RC --[#red]> SPA: <color:#red>500 INTERNAL SERVER ERROR</color>
+    end
+
+    TS --[#green]> Filter --: **[7]** HTTP Response
+    Filter --[#green]> RC --: Response
+    RC --[#green]> SPA: **[8]** Proxy Response
+
 end
 @enduml

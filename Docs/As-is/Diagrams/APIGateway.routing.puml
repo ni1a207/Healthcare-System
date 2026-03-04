@@ -2,45 +2,29 @@
 skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
-skinparam Style strictuml
 
 participant "Single Page Application" as SPA #LightBlue
 
 box "api-gateway" #5D6D7E
-    participant "Route Configuration" as RC #D5E8D4
+    participant "Route Configuration" as RC #White
 end box
 
-' Теперь сервис находится за границей гейтвея
 participant "target-service" as TS #F4ECF7
 
-autonumber "<b>[0]</b>"
-autonumber stop
+group #LightCyan Проксирование публичного запроса\nПорт: 4004 → target-service (StripPrefix=1)
 
-group #LightCyan Проксирование публичного запроса
-    SPA -> RC: HTTP Request (порт 4004)
-    activate SPA
-    activate RC
+    SPA -> RC ++: **[1]** HTTP Request
+    RC -> RC: Поиск маршрута в application.yml\nJwtValidation filter NOT FOUND
 
-autonumber resume
-    RC -> RC: Поиск маршрута в YAML:\nJwtValidation filter NOT found
+    RC -> TS ++: **[2]** Proxy Request\n(/auth/... → /... via StripPrefix=1)
 
-    RC -> TS: Proxy Request
-    activate TS
-
-autonumber stop
     alt #MistyRose Целевой сервис недоступен
-        TS --[#red]> RC: <color:#red>Connection Refused / Timeout </color>
-        RC  --[#red]> SPA: <color:#red>500 INTERNAL SERVER ERROR</color>
-
-    else #LightGreen Ответ на запрос
-        autonumber resume
-        TS --> RC: HTTP Response
-        deactivate TS
-
-        RC --> SPA: Proxy Response
+        TS --[#red]> RC: <color:#red>Connection Refused / Timeout</color>
+        RC --[#red]> SPA: <color:#red>500 INTERNAL SERVER ERROR</color>
     end
 
-    deactivate RC
-    deactivate SPA
+    TS --[#green]> RC --: **[3]** HTTP Response
+    RC --[#green]> SPA: **[4]** Proxy Response
+
 end
 @enduml

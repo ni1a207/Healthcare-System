@@ -1,30 +1,27 @@
 ## Алгоритм работы при запросе к защищенным ресурсам системы
 
-1. `api-gateway` получает запрос, через `Route Configuration` анализирует URL запроса: ищет совпадение в `application.yml`. Если для найденного маршрута в списке `filters` указан `JwtValidation`.
+1. `api-gateway` принимает HTTP-запрос на порту 4004. Компонент `Route Configuration` сопоставляет URI запроса с правилами маршрутизации в `application.yml`. Для маршрута `/api/patients/**` в списке `filters` указан `JwtValidation`.
 
 
-2. Управление передается классу-обработчику `JwtValidationGatewayFilterFactory`.
+2. `Route Configuration` передаёт управление фильтру `JwtValidationGatewayFilterFactory`.
 
 
-3. `JwtValidationGatewayFilterFactory` извлекает из заголовка `Authorization` значение `Bearer <token>`. Если токена нет или он не начинается с `Bearer `  шлюз возвращает HTTP статус-код `401 UNAUTHORIZED`.
+3. `JwtValidationGatewayFilterFactory` извлекает значение заголовка `Authorization` из входящего запроса. Если заголовок отсутствует или не начинается с префикса `Bearer ` — `api-gateway` немедленно возвращает клиенту HTTP статус-код `401 UNAUTHORIZED`, запрос не проксируется.
 
 
-4. `api-gateway`, используя реактивный `WebClient`, инициирует проверку сессии: выполняется HTTP-запрос `GET /validate` в `auth-service` с заголовком `Authorization`.
+4. `JwtValidationGatewayFilterFactory` через реактивный `WebClient` инициирует HTTP-запрос `GET /validate` к `auth-service` с заголовком `Authorization: Bearer <token>`.
 
 
-5. `auth-service` проверяет токен и возвращает ответ:
-   
-   **5.1.** Если сервис не отвечает или произошла ошибка на сервере — `api-gateway` возвращает HTTP статус-код `500 INTERNAL SERVER ERROR`.
-    
-   **5.2.** Если токен не прошел проверку, сервис возвращает HTTP статус-код `401 UNAUTHORIZED`.
-    
-   **5.3.** Если токен прошел проверку, сервис возвращает HTTP статус-код `200 OK`.
+5. `auth-service` выполняет валидацию токена и возвращает ответ. Если `auth-service` недоступен или вернул любой не-2xx статус — `WebClient` выбрасывает `WebClientResponseException`, которое не перехватывается — `api-gateway` возвращает клиенту HTTP статус-код `500 INTERNAL SERVER ERROR`.
 
 
-6. `api-gateway` получает ответ `200 OK` и проксирует запрос к целевому сервису.
+>**Важно:** В текущей реализации JwtValidationGatewayFilterFactory отсутствует явная обработка 401 от auth-service через .onStatus(). Если токен невалиден и auth-service возвращает 401 — клиент получит 500, а не 401.
 
 
-7. `api-gateway` получает ответ от целевого сервиса.
+6. При получении `200 OK` от `auth-service` — `WebClient` передаёт управление следующему фильтру в цепочке `chain.filter(exchange)`. `api-gateway` проксирует запрос к целевому сервису. Префикс `/api` удаляется через `StripPrefix=1` — запрос `/api/patients/123` преобразуется в `/patients/123`.
+
+
+7. `api-gateway` получает ответ от целевого сервиса. Если сервис недоступен — возвращается HTTP статус-код `500 INTERNAL SERVER ERROR`.
 
 
 8. `api-gateway` проксирует ответ клиенту.
@@ -33,11 +30,13 @@
 
 ## Алгоритм работы при запросе к публичным ресурсам системы
 
-1. `api-gateway` принимает HTTP-запрос от `Single Page Application`. Компонент `Route Configuration` сопоставляет URI запроса с правилами в `application.yml`. Если для найденного маршрута в списке `filters` не указан `JwtValidation`, `JwtValidationGatewayFilterFactory` и `WebClient` (для вызова auth-service) в обработке не участвуют.
-2. `api-gateway`  проксирует запрос к целевому сервису.
+1. `api-gateway` принимает HTTP-запрос на порту 4004. Компонент `Route Configuration` сопоставляет URI запроса с правилами в `application.yml`. Для маршрута `/auth/**` фильтр `JwtValidation` не указан — `JwtValidationGatewayFilterFactory` и `WebClient` в обработке не участвуют. Префикс `/auth`удаляется через `StripPrefix=1`.
 
 
-3. `api-gateway` получает ответ от целевого сервиса.
+2. `api-gateway` проксирует запрос к целевому сервису.
+
+
+3. `api-gateway` получает ответ от целевого сервиса. Если сервис недоступен — возвращается HTTP статус-код `500 INTERNAL SERVER ERROR`.
 
 
 4. `api-gateway` проксирует ответ клиенту.
