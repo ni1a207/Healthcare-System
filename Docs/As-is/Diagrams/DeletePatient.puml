@@ -1,0 +1,32 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+participant "frontend" as SPA #FFF2CC
+
+boundary "api-gateway" as GW #FEF9E7
+
+
+participant "auth-service" as Auth #EBF5FB
+participant "patient-service" as PS #F4ECF7
+database "patient_db" as DB #F4ECF7
+
+group #LightCyan Удаление данных пациента
+
+    SPA -> GW ++: **[1]** DELETE /api/patients/{id}\n(Authorization: Bearer <token>)
+
+    GW -> GW: **[2]** Проверка токена
+    GW -> Auth ++: GET /validate\n(Authorization: Bearer <token>)
+    Auth --[#green]> GW --: 200 OK
+
+    GW -> PS ++: **[3]** DELETE /patients/{id}
+
+    PS -> DB ++: **[4]** Удаление записи
+    DB --> PS --: Запись удалена
+
+    PS --[#green]> GW --: **[5]** 204 NO CONTENT
+    GW --[#green]> SPA --: **[6]** 204 NO CONTENT
+
+end
+@enduml

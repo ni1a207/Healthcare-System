@@ -10,46 +10,45 @@ database "patient-db" as DB #F4ECF7
 participant "BillingServiceGrpcClient" as BSGRPC #F4ECF7
 participant "billing-service" as BS #F4ECF7
 participant "kafka" as K #F4ECF7
-autonumber "<b>0</b>"
+autonumber "<b>[0]</b>"
 group #LightCyan Регистрация нового пациента
-    FE -> GW: POST {host}/patients
-    activate FE #White
+    FE -> GW: POST /api/patients\n(Authorization: Bearer <token>, JSON body)
     activate GW
-    GW -> Auth: GET {host}/validate
+        GW -> GW: Проверка токена
+            autonumber stop
+    GW -> Auth: GET /validate\n(Authorization: Bearer <token>)
     activate Auth
     autonumber stop
-    Auth --> GW: 200 OK
+    Auth --[#green]> GW: 200 OK
     deactivate Auth
 autonumber resume
-    GW -> PS: POST {host}/patients
+    GW -> PS: POST /patients \n(JSON body)
     activate PS
   PS->PS: Валидация входных параметров
   PS->DB: Поиск записей по полю email
   activate DB
   autonumber stop
     DB-->PS: Записи не найдены
-PS->PS: Генерация UUID
-PS->DB: Новая запись
+PS->DB: Новая запись + генерация UUID
 DB-->PS: Данные записаны
 deactivate DB
 autonumber resume
-PS->BSGRPC: (patienId, name, email)
+PS->BSGRPC: BillingRequest
 activate BSGRPC
 BSGRPC->BS: CreateBillingAccount
 activate BS
 BS->BS: Логирование входящих данных
 autonumber stop
-BS-->BSGRPC: BillingResponse
+BS--[#green]>BSGRPC: BillingResponse
 deactivate BS
-BSGRPC-->PS: OK
+BSGRPC--[#green]>PS: BillingResponse
 deactivate BSGRPC
 autonumber resume
 PS->PS: Создает PatientEvent
 PS->>K: PatientEvent
-PS-->GW: Response 200 OK + JSON
+PS--[#green]>GW: 200 OK (JSON)
 deactivate PS
-autonumber stop
-GW-->FE: 200 OK + JSON
+GW--[#green]>FE: 200 OK (JSON)
 deactivate GW
   end
 @enduml

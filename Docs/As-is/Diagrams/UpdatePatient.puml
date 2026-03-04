@@ -1,0 +1,38 @@
+@startuml
+skinparam Shadowing true
+skinparam RoundCorner 5
+skinparam MaxMessageSize 250
+
+participant "frontend" as SPA #FFF2CC
+
+boundary "api-gateway" as GW #FEF9E7
+
+
+participant "auth-service" as Auth #EBF5FB
+participant "patient-service" as PS #F4ECF7
+database "patient_db" as DB #F4ECF7
+
+group #LightCyan Изменение данных пациента
+
+    SPA -> GW ++: **[1]** PUT /api/patients/{id}\n(Authorization: Bearer <token>, JSON body)
+
+    GW -> GW: **[2]** Проверка токена
+    GW -> Auth ++: GET /validate\n(Authorization: Bearer <token>)
+    Auth --[#green]> GW --: 200 OK
+
+    GW -> PS ++: **[3]** PUT /patients/{id}\n(JSON body)
+
+    PS -> DB ++: **[4]** Поиск записи по id
+    DB --> PS --: Найденная запись
+
+    PS -> DB ++: Поиск записей по email
+    DB --> PS --: 0 (email свободен)
+
+    PS -> DB ++: Обновление записи
+    DB --> PS --: Данные обновлены
+
+    PS --[#green]> GW --: **[5]** 200 OK (JSON)
+    GW --[#green]> SPA --: **[6]** 200 OK (JSON)
+
+end
+@enduml
