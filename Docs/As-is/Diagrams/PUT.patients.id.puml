@@ -3,33 +3,93 @@ skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
-boundary "API Consumer" as ac #FEF9E7
+boundary "API Consumer" as AC #FEF9E7
 
-box "auth-service" #5D6D7E
-    participant "PatientController" as pc
-    participant "PatientService" as ps
-    participant "PatientRepository" as pr
+box "patient-service" #5D6D7E
+    participant "DispatcherServlet" as DS #White
+    participant "Jackson" as Jackson #White
+    participant "PatientController" as Ctrl #White
+    participant "PatientService" as Service #White
+    participant "PatientRepository" as Repo #White
+    participant "PatientMapper" as Mapper #White
+    participant "GlobalExceptionHandler" as GEH #LightSalmon
 end box
 
-database "Database (patient_db)" as db #EAFAF1
+database "patient_db" as DB #LightBlue
 
+group #LightCyan Процесс обновления пациента\nВнешний URL: PUT {gateway-host}/api/patients/{id} → Внутренний URL: PUT patient-service:4000/patients/{id}
 
-ac->pc++: DELETE /patients/{id}
-ac++
-pc->pc: обработка запроса
-pc->ps: deletePatient(@PathVariable UUID id)
-ps++
-ps->pr: deletePatient(@PathVariable UUID id)
-pr++
+    AC -> DS ++: **[1]** PUT /patients/{id} (JSON)
 
-pr->db++: JDBC (DELETE...)
-db-->pr: Response
-db--
-pr-->ps: Response
-pr--
-ps-->pc: Response
-pc-->ac:200OK
-pc--
+    DS -> Jackson ++: **[2]** Десериализация (JSON -> DTO)
+    Jackson --> DS --: **[3]** PatientRequestDTO\n(dateOfBirth — как строка, без проверки формата)
 
+    DS -> DS: **[4]** Валидация параметров PatientRequestDTO\n(@Validated({Default.class}))
+    alt #MistyRose Ошибка валидации
+        DS -> GEH ++: <color:#red>MethodArgumentNotValidException</color>
+        GEH --[#red]> AC: <color:#red>400 BAD REQUEST + message</color>
+        deactivate GEH
+    end
 
+    note over DS, Ctrl #FFF3CD: **Важно**: Поле registeredDate не валидируется —\n@Validated({Default.class}) без CreatePatientValidationGroup.
+
+    DS -> Ctrl ++: **[5]** updatePatient(id, patientRequestDTO)
+    Ctrl -> Service ++: **[6]** updatePatient(id, patientRequestDTO)
+
+    Service -> Repo ++: **[7]** findById(id)
+    Repo -> DB ++: SELECT * FROM patient WHERE id = ?
+    DB --> Repo --: ResultSet
+
+    alt #MistyRose Пациент не найден
+        Repo --[#red]> Service: Optional.empty()
+        Service -> GEH ++: <color:#red>throw PatientNotFoundException</color>
+        note right of GEH: log.warn("Patient not found {}", message)
+        GEH --[#red]> AC: <color:#red>400 BAD REQUEST + "Patient not found"</color>
+        deactivate GEH
+    end
+
+    Repo --> Service --: Optional<Patient>
+
+    Service -> Repo ++: **[8]** existsByEmailAndIdNot(email, id)
+    Repo -> DB ++: SELECT count(*) FROM patient\nWHERE email = ? AND id != ?
+    DB --> Repo --: ResultSet
+
+    alt #MistyRose Email уже существует у другого пациента
+        Repo --[#red]> Service: true
+        Service -> GEH ++: <color:#red>throw EmailAlreadyExistsException</color>
+        note right of GEH: log.warn("Email address already exist {}", message)
+        GEH --[#red]> AC: <color:#red>400 BAD REQUEST + "Email address already exists"</color>
+        deactivate GEH
+    end
+
+    Repo --> Service --: false
+
+    Service -> Service: **[9]** patient.setName()\npatient.setAddress()\npatient.setEmail()\nLocalDate.parse(dateOfBirth)
+
+    alt #MistyRose Неверный формат даты
+        Service --[#red]> Ctrl: <color:#red>DateTimeParseException</color>
+        note right of Service: Изменения не сохранены в БД —\npatientRepository.save() не был вызван.
+        Ctrl --[#red]> DS: <color:#red>DateTimeParseException</color>
+        DS --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+    end
+
+    Service -> Repo ++: **[10]** save(patient)
+    Repo -> DB ++: UPDATE patient\nSET name = ?, address = ?, email = ?, date_of_birth = ?\nWHERE id = ?
+    DB --> Repo --: Success
+    Repo --> Service --: Updated Entity
+
+    Service -> Mapper ++: **[11]** toDTO(updatedPatient)
+    Mapper --> Service --: PatientResponseDTO
+
+    Service --[#green]> Ctrl --: **[12]** ResponseEntity.ok(PatientResponseDTO)
+    Ctrl --[#green]> DS --: ResponseEntity
+
+    DS -> Jackson ++: **[13]** Сериализация (DTO -> JSON)
+    Jackson --> DS --: JSON
+
+    DS --[#green]> AC --: **[14]** 200 OK (JSON)
+    deactivate Repo
+    deactivate Mapper
+
+end
 @enduml

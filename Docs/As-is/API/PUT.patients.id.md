@@ -240,7 +240,7 @@ Response body (json):
 
 14. `DispatcherServlet` записывает JSON в тело ответа и отправляет клиенту со статусом `200 OK`.
 
-
+![PUT.patients.id.svg](..%2FDiagrams%2FPUT.patients.id.svg)
 ---
 
 ## Логирование

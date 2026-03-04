@@ -6,53 +6,54 @@ skinparam MaxMessageSize 250
 boundary "API Consumer" as AC #FEF9E7
 
 box "auth-service" #5D6D7E
-    participant "AuthController" as Ctrl
-    participant "AuthService" as Service
-    participant "JJWT (Library)" as Utils
+    participant "DispatcherServlet" as DS #White
+    participant "AuthController" as Ctrl #White
+    participant "AuthService" as Service #White
+    participant "JwtUtil" as Jwt #White
 end box
 
-group #LightCyan Процесс валидации токена (GET /validate)
-    AC -> Ctrl: GET /validate (Authorization Header)
-    activate Ctrl
+group #LightCyan Процесс валидации токена\nВнешний URL: GET {gateway-host}/auth/validate → Внутренний URL: GET auth-service:4005/validate
 
-    Ctrl -> Ctrl: **[1]** Проверка наличия и формата\nзаголовка (Bearer)
+    AC -> DS ++: **[1]** GET /validate\n(Authorization: Bearer <token>)
 
-    alt #MistyRose Заголовок отсутствует или неверный префикс
-        Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
-    else #LightCyan Заголовок корректен
-
-        Ctrl -> Service: **[2]** validateToken(JWT String)
-        activate Service
-
-        Service -> Utils: **[3]** Вызов библиотеки (try)
-        activate Utils
-
-        note right of Utils
-          **[3.1]** Проверка структуры
-          **[3.2]** Проверка подписи (Secret Key)
-          **[3.3]** Проверка срока действия (exp)
-        end note
-
-        alt #MistyRose Выброшено JwtException
-            Utils --[#red]> Service: <color:#red>throw JwtException</color>
-            Service --[#red]> Ctrl: <color:#red>false (catch)</color>
-            Ctrl --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
-        else #LightGreen Валидация успешна
-            Utils --> Service: [void/success]
-            deactivate Utils
-
-            Service --> Ctrl: true
-            deactivate Service
-
-            Ctrl --> AC: **[3]** 200 OK
-        end
+    alt #MistyRose Заголовок Authorization отсутствует
+        DS --[#red]> AC: <color:#red>400 BAD REQUEST</color>
+        note right of DS: Spring возвращает 400 автоматически\nдо выполнения кода контроллера.
     end
+
+    DS -> Ctrl ++: **[2]** validateToken(authHeader)
+
+    alt #MistyRose Префикс "Bearer " отсутствует
+        Ctrl --[#red]> DS: <color:#red>401 UNAUTHORIZED</color>
+        DS --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+    end
+
+    Ctrl -> Ctrl: **[3]** authHeader.substring(7) → token
+
+    Ctrl -> Service ++: **[4]** validateToken(token)
+    Service -> Jwt ++: **[5]** jwtUtil.validateToken(token)
+
+    note over Jwt #LightYellow: Проверки JJWT:\n5.1 Структура (Header.Payload.Signature)\n5.2 Подпись (secretKey vs Signature)\n5.3 Срок действия (exp vs now)
+
+    alt #MistyRose JwtException (неверная подпись / истёк срок / повреждённая структура)
+        Jwt --[#red]> Service: <color:#red>JwtException</color>
+        Service --[#red]> Ctrl: false
+        Ctrl --[#red]> DS: <color:#red>401 UNAUTHORIZED</color>
+        DS --[#red]> AC: <color:#red>401 UNAUTHORIZED</color>
+    end
+
+    Jwt --[#green]> Service --: void (success)
+
+    Service --[#green]> Ctrl --: **[6]** true
+    Ctrl --[#green]> DS --: **[7]** ResponseEntity.ok()
+    DS --[#green]> AC --: **[8]** 200 OK
+    deactivate Service
+    deactivate Jwt
+
 end
 
 group #WhiteSmoke Системные сбои
-    Service --[#red]> Ctrl: <color:#red>Exception (Critical Error)</color>
-    Ctrl --[#red]> AC: <color:#red>500 INTERNAL SERVER ERROR</color>
+    note over DS, Jwt #FFE4E1: Критический сбой — необработанное исключение\n(ошибка конфигурации секретного ключа)\n→ 500 INTERNAL SERVER ERROR
 end
 
-deactivate Ctrl
 @enduml
