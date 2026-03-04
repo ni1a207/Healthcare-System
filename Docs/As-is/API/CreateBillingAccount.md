@@ -8,7 +8,7 @@
 
 **Метод:** `CreateBillingAccount`
 
-**Тип вызова:** Unary
+**Тип вызова:** `Unary`
 
 ---
 
@@ -60,7 +60,7 @@ Body:
 
 ---
 
-## Примеры зампроса и ответа
+## Примеры запроса и ответа
 
 Запрос:
 
@@ -103,32 +103,40 @@ grpc-message: ""
 ---
 
 ## Алгоритм работы
-1. `patient-service` инициирует gRPC-вызов к `billing-service`. Если `billing-service` выключен или порт закрыт, клиентская библиотека сразу возвращает статус-код `14 UNAVAILABLE`. Дальнейшие шаги не выполняются.
+
+1. `patient-service` через `BillingServiceGrpcClient` инициирует gRPC-вызов. `BillingServiceGrpcClient` формирует объект `BillingRequest` через `BillingRequest.newBuilder().setPatientId(patientId).setName(name).setEmail(email).build()` и вызывает `blockingStub.createBillingAccount(request)`. Соединение установлено по `plaintext` (без TLS) через `ManagedChannelBuilder.usePlaintext()`. Если `billing-service` недоступен — клиентская библиотека выбрасывает `StatusRuntimeException` со статусом `14 UNAVAILABLE`.
 
 
-2. Библиотека `grpc-netty-shaded` принимает входящий TCP-пакет. HTTP/2 фреймы извлекаются и передаются в стек обработки gRPC.
+2. `grpc-netty-shaded` на стороне `billing-service` принимает входящий TCP-пакет, извлекает HTTP/2 фреймы и передаёт их в стек обработки gRPC.
 
 
-3. Библиотека `protobuf-java` выполняет десериализацию бинарных данных из тела запроса в Java-объект `BillingRequest`. Если структура данных повреждена, возвращается статус-код `13 INTERNAL`.
+3. `protobuf-java` выполняет десериализацию бинарных данных из тела запроса в Java-объект `BillingRequest`. Если структура данных повреждена — возвращается статус-код `13 INTERNAL`.
 
 
-4. `grpc-spring-boot-starter` находит компонент, помеченный аннотацией `@GrpcService`, и передает управление методу `createBillingAccount` класса `BillingGrpcService`.
+4. `grpc-spring-boot-starter` находит компонент `BillingGrpcService` помеченный аннотацией `@GrpcService`и передаёт управление методу `createBillingAccount(billingRequest, responseObserver)`.
 
 
-5. С помощью `SLF4J` выполняется запись в лог уровня INFO: `createBillingAccount request received {данные_запроса}`. В лог попадают значения полей `patientId`, `name` и `email`, полученные из `billingRequest.toString()`.
+5. `BillingGrpcService` формирует объект `BillingResponse` через `BillingResponse.newBuilder().setAccountId("12345").setStatus("ACTIVE").build()`.
 
 
-6. Вызывается метод `BillingResponse.newBuilder()`, который создает экземпляр класса `Builder` для конструирования ответного сообщения.
+>**Важно:** Текущая реализация является заглушкой (mock). Сохранение данных в БД и реальная генерация accountId не выполняются.
 
 
-7. В объекте `Builder` последовательно вызываются методы `setAccountId("12345")` и `setStatus("ACTIVE")`. После этого вызывается метод `build()`, который возвращает готовый неизменяемый объект `BillingResponse`.
- 
-
-8. Метод `responseObserver.onNext(response)` передает объект `BillingResponse` обратно в gRPC-инфраструктуру, где `protobuf-java` выполняет его сериализацию в бинарный формат.
+6. `responseObserver.onNext(response)` передаёт объект `BillingResponse` в gRPC-инфраструктуру — `protobuf-java` сериализует его в бинарный формат и отправляет обратно в `patient-service`.
 
 
-9. Метод `responseObserver.onCompleted()` закрывает стрим.`patient-service`получает статус-код `0 OK`.
-
-> **Важно**: Текущая реализация сервиса является заглушкой (mock). Сохранение данных в базу данных и реальная генерация ID аккаунта не выполняются. 
+7. `responseObserver.onCompleted()` закрывает стрим. `patient-service` получает статус-код `0 OK` и объект `BillingResponse`.
 
 
+8. `BillingServiceGrpcClient` получает ответ и возвращает объект `BillingResponse` в `PatientService`.
+
+![CreateBillingAccount.svg](..%2FDiagrams%2FCreateBillingAccount.svg)
+
+---
+## Логирование
+
+| Шаг в алгоритме       | Уровень | Класс                      | Сообщение                                   |
+|:----------------------|:--------|:---------------------------|:--------------------------------------------|
+| 4                     | INFO    | BillingGrpcService     |createBillingAccount request received {billingRequest}|
+| 8                     | INFO    | BillingServiceGrpcClient                           | Received response from billing service via GRPC: {response}|
+| При старте приложения |INFO|BillingServiceGrpcClient|Connecting to Billing Service GRPC service at {address}:{port}|

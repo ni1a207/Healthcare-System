@@ -3,62 +3,50 @@ skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
-box "patient-service" #D5DBDB
-    participant "BillingGrpcClient" as PS #White
+box "patient-service" #5D6D7E
+    participant "BillingServiceGrpcClient" as Client #White
 end box
 
-box "billing-service" #5D6D7E
-    participant "Netty" as Netty #White
-    participant "Protobuf-java" as Proto #LightYellow
-    participant "BillingGrpcService" as BS #White
-    participant "BillingResponse.Builder" as Builder #White
+box "billing-service" #4A235A
+    participant "grpc-netty-shaded" as Netty #White
+    participant "protobuf-java" as Proto #White
+    participant "BillingGrpcService\n(@GrpcService)" as Grpc #White
 end box
 
-group #LightCyan Алгоритм обработки CreateBillingAccount
-    PS -> Netty: **[1]** Инициация gRPC-вызова (TCP/HTTP2)
-    activate Netty
+group #LightCyan Процесс создания биллинг-аккаунта\nUnary gRPC: billing.BillingService/CreateBillingAccount\npatient-service → billing-service:9001 (plaintext)
 
-    alt #MistyRose Ошибка соединения (UNAVAILABLE)
-        Netty --[#red]> PS: <color:#red>gRPC Status: 14</color>
-    else #HoneyDew Успешное соединение
+    Client -> Client: **[1]** BillingRequest.newBuilder()\n.setPatientId(patientId)\n.setName(name)\n.setEmail(email)\n.build()
 
-        Netty -> Netty: **[2]** Прием TCP-пакета и извлечение фреймов
-
-        Netty -> Proto: Передача бинарных данных
-        activate Proto
-        Proto -> Proto: **[3]** Десериализация в BillingRequest
-
-        alt #MistyRose Ошибка формата (INTERNAL)
-            Proto --[#red]> Netty: <color:#red>Exception</color>
-            Netty --[#red]> PS: <color:#red>gRPC Status: 13</color>
-        else #HoneyDew Успех
-            Proto --> Netty: BillingRequest object
-            deactivate Proto
-
-            Netty -> BS: **[4]** createBillingAccount(request, responseObserver)
-            activate BS
-
-            BS -> BS: **[5]** log.info("request received...")
-
-                BS -> Builder: **[6]** newBuilder()
-                activate Builder
-                Builder -> Builder: **[7]** setAccountId, setStatus, build()
-                Builder --> BS: BillingResponse
-                deactivate Builder
-
-            BS -> Netty: **[8]** responseObserver.onNext(response)
-            Netty -> Proto: Сериализация объекта
-            activate Proto
-            Proto --> Netty: binary data
-            deactivate Proto
-
-            BS -> Netty: **[9]** responseObserver.onCompleted()
-            deactivate BS
-
-            Netty --[#green]> PS: <color:#green> gRPC Status: 0 </color>
-            deactivate Netty
-        end
+    alt #MistyRose billing-service недоступен
+        Client --[#red]> Client: <color:#red>StatusRuntimeException (14 UNAVAILABLE)</color>
     end
-end
 
+    Client -> Netty ++: **[2]** HTTP/2 TCP-пакет\n(BillingRequest, Protobuf binary)
+
+    Netty -> Proto ++: **[3]** Десериализация\n(binary → BillingRequest)
+
+    alt #MistyRose Повреждённая структура данных
+        Proto --[#red]> Client: <color:#red>13 INTERNAL</color>
+        deactivate Proto
+    end
+
+    Proto --> Netty --: BillingRequest
+
+    Netty -> Grpc ++: **[4]** createBillingAccount\n(billingRequest, responseObserver)
+    note right of Grpc: log.info("createBillingAccount\nrequest received {}", billingRequest)
+
+    Grpc -> Grpc: **[5]** BillingResponse.newBuilder()\n.setAccountId("12345")\n.setStatus("ACTIVE")\n.build()
+    note right of Grpc: Mock — сохранение в БД\nи генерация accountId\nне выполняются.
+
+    Grpc -> Proto ++: **[6]** responseObserver.onNext(response)\n(BillingResponse → binary)
+    Proto --> Grpc --: serialized
+
+    Grpc -> Netty: **[7]** responseObserver.onCompleted()
+    deactivate Grpc
+
+    Netty --[#green]> Client --: **[8]** 0 OK\nBillingResponse\n{accountId: "12345", status: "ACTIVE"}
+
+    note right of Client: log.info("Received response from\nbilling service via GRPC: {}", response)
+
+end
 @enduml
