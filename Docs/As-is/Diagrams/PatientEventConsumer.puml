@@ -3,44 +3,33 @@ skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
-box "analytics-service"  #5D6D7E
-    participant "KafkaConsumer" as Consumer #White
-    participant "PatientEvent (Protobuf)" as Proto #White
+queue "Kafka\ntopic: patient" as KF #FADBD8
+
+box "analytics-service" #5D6D7E
+    participant "KafkaConsumer\n(@KafkaListener)" as Consumer #White
+    participant "protobuf-java" as Proto #White
 end box
 
-queue "Kafka" as KF #FADBD8
+group #LightCyan Обработка события PatientEvent\nKafka topic: patient → analytics-service (groupId: analytics-service)
 
-[-> KF : Новое сообщение в топике "patient"
-activate KF
+    KF -> Consumer ++: **[1]** consumeEvent(byte[] event)\n(Spring Kafka delivers message)
 
-group #LightCyan Алгоритм обработки (consumeEvent)
-    KF -> Consumer : consumeEvent(byte[] event)
-    activate Consumer
+    Consumer -> Proto ++: **[2]** PatientEvent.parseFrom(event)
 
-    Consumer -> Proto : parseFrom(byte[])
-    activate Proto
+    alt #MistyRose Повреждённые данные / неверный формат
+        Proto --[#red]> Consumer: <color:#red>InvalidProtocolBufferException</color>
 
-    alt #HoneyDew Успешная десериализация
-        Proto --> Consumer : PatientEvent (Object)
-        deactivate Proto
-
-        Consumer -> Consumer : Извлечение: patientId, name, email
-
-        Consumer -[#green]> Consumer : <color:#green>log.info("Received Patient Event: [...]")</color>
-        note right: Вывод данных пациента в консоль
-
-    else #MistyRose Неверный формат / данные повреждены / ошибка десериализация
-        Proto --[#red]> Consumer : <color:#red>throw InvalidProtocolBufferException</color>
-        deactivate Proto
-
-        Consumer -[#red]> Consumer : <color:#red>log.error("Error deserializing event", e)</color>
-        note right: **Фиксация сбоя:**\nДанные не могут быть прочитаны
+        Consumer -> Consumer: <color:#red>catch(InvalidProtocolBufferException e)\nlog.error("Error deserializing event {}", e.getMessage())</color>
+        note right of Consumer: **Silent Data Loss:**\nАвто-коммит offset выполнен.\nСообщение потеряно безвозвратно\n(DLQ не настроен).
     end
-KF <-- Consumer : Offset Commit (Implicit)
 
-    deactivate Consumer
+    Proto --> Consumer --: PatientEvent object
+
+    Consumer -> Consumer: **[3]** Извлечение полей:\npatientId, name, email
+
+    Consumer -> Consumer: **[4]** log.info(\n"Received Patient Event:\n[PatientId={},PatientName={},PatientEmail={}]",\npatientId, name, email)
+
+    Consumer --> KF --: **[5]** Авто-коммит offset\n(Spring Kafka auto-commit)
+
 end
-
-deactivate KF
-
 @enduml

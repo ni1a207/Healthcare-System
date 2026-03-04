@@ -2,19 +2,23 @@
 
 ## Назначение
 
-Событие потребляется сервисом analytics-service. Метод предназначен для получения данных о создании новых пациентов из Kafka для их последующей регистрации в системе аналитики. Текущая реализация выполняет роль логирующей заглушки.
+Событие потребляется сервисом `analytics-service`. Метод предназначен для получения данных о создании новых пациентов из Kafka для их последующей регистрации в системе аналитики. Текущая реализация выполняет роль логирующей заглушки.
+
+---
 
 ## Общие сведения
 
-**Consumer:** analytics-service
+**Consumer:** `analytics-service`
 
-**Topic:** patient
+**Topic:** `patient`
 
-**Protocol:** TCP
+**Protocol:** `TCP`
 
-**Format message:** Protobuf
+**Format message:** `Protobuf`
 
-**Group ID:** analytics-service
+**Group ID:** `analytics-service`
+
+---
 
 ## Структура сообщения (Схема Protobuf)
 
@@ -27,42 +31,52 @@
 | email | string | Да | Электронная почта пациента |john.doe@example.com|-|
 | event_type | string | Да | Тип события |PATIENT_CREATED|-|
 
+---
+
 ## Алгоритм обработки события
 
 Обработка происходит в классе `KafkaConsumer` при поступлении сообщения в топик `patient`.
 
-1. Триггер: Получение массива байтов (`byte[]`) из Kafka.
+1. Триггер: брокер Kafka доставляет сообщение из топика `patient` в `analytics-service`. Spring Kafka вызывает метод `consumeEvent(byte[] event)` аннотированный `@KafkaListener(topics="patient", groupId="analytics-service")`.
 
 
-2. Десериализация: Вызов метода `PatientEvent.parseFrom(event)`, библиотека `protobuf-java` преобразует бинарные данные в Java-объект. 
+2. `protobuf-java` десериализует полученный массив байтов `byte[]` в Java-объект `PatientEvent` через `PatientEvent.parseFrom(event)`.
 
 
-
-3. Извлечение данных: Из объекта `patientEvent` извлекаются поля `patientId`, `name` и `email`.
- 
- 
-4. Логирование: С помощью `SLF4J` выполняется запись в лог уровня INFO: 
+3. Из объекта `patientEvent` извлекаются поля `patientId`, `name`, `email`.
 
 
-5. Фиксация смещения (Ack): После завершения метода consumeEvent, сервис автоматически подтверждает обработку сообщения (Auto-commit), сдвигая offset в Kafka.
-   
-
-    INFO [имя_потока] com.pm.analyticsservice.kafka.KafkaConsumer - Received Patient Event: [PatientId=550e8400-e29b-41d4-a716-446655440000, PatientName=John Doe, PatientEmail=john.doe@example.com]
-
-## Обработка исключительных ситуаций
-
-### **В топик поступило сообщение, не соответствующее схеме `PatientEvent` / поврежденные данные / ошибка десериализации**
-
-1. Выбрасывается исключение `InvalidProtocolBufferException`, исключение перехватывается catch-блоком. Ошибка записывается в лог приложения: `Error deserializing event {message}`.
+4. С помощью SLF4J выполняется запись в лог уровня `INFO`:
 
 
-    ERROR [имя_потока] c.p.a.k.KafkaConsumer - Error deserializing event
-    [Stacktrace: com.google.protobuf.InvalidProtocolBufferException: <Причина ошибки>]
+    INFO com.pm.analyticsservice.kafka.KafkaConsumer - Received Patient Event: [PatientId=550e8400-e29b-41d4-a716-446655440000,PatientName=John Doe,PatientEmail=john.doe@example.com]
+
+5. Метод `consumeEvent()` завершается. Spring Kafka выполняет авто-коммит offset — сообщение считается обработанным.
 
 
-2. Метод `consumeEvent` завершается нормально. Поскольку AckMode явно не настроен, Spring Kafka выполняет авто-коммит offset — сообщение считается обработанным и безвозвратно теряется (DLQ не настроен).
+### Обработка исключительных ситуаций
 
+#### **Сообщение не соответствует схеме `PatientEvent` / поврежденные данные / ошибка десериализации**
+
+1. `PatientEvent.parseFrom(event)` выбрасывает `InvalidProtocolBufferException`, которое перехватывается блоком catch.
+
+
+2. Ошибка записывается в лог уровня `ERROR`. В `{}` подставляется `e.getMessage()` — только текст ошибки без `stacktrace`:
+
+
+    ERROR com.pm.analyticsservice.kafka.KafkaConsumer - Error deserializing event <сообщение об ошибке>
+
+
+3. Метод `consumeEvent()` завершается нормально. Spring Kafka выполняет авто-коммит offset — сообщение считается обработанным и безвозвратно теряется (DLQ не настроен).
 
 > **Важно**: Текущая реализация не сохраняет данные в базу данных и не выполняет агрегацию метрик. Ключ сообщения (Kafka Key) сервисом не обрабатывается.
 
 ![PatientEventConsumer.svg](..%2FDiagrams%2FPatientEventConsumer.svg)
+
+---
+## Логирование
+
+| Шаг в алгоритме | Уровень | Класс | Сообщение                                   |
+|:----------------|:--------|:------|:--------------------------------------------|
+| 4               |INFO| KafkaConsumer      | Received Patient Event: [PatientId={},PatientName={},PatientEmail={}]|
+| Исключительная ситуация                |ERROR| KafkaConsumer      | Error deserializing event {e.getMessage()}|
