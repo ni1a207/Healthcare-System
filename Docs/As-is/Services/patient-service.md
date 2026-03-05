@@ -2,9 +2,15 @@
 
 ## Назначение
 Сервис управления данными пациентов. Реализует CRUD-операции, синхронное создание платежного аккаунта в Billing Service через gRPC и асинхронную публикацию событий создания пациента в Kafka.
+
+---
+
 ## Архитектурная схема (C4 Component)
 
 ![PatientServiceC4.svg](..%2FDiagrams%2FPatientServiceC4.svg)
+
+---
+
 ## Стек технологий
 
 * **Runtime**: Java 21 (Eclipse Temurin / OpenJDK).
@@ -18,12 +24,17 @@
   
  *В коде присутствует закомментированная конфигурация для H2 (In-memory), которая может быть активирована для локальных тестов.*
 
+---
+
 ## Безопасность и контроль доступа
 
 Доступ ко всем эндпоинтам осуществляется через API Gateway после валидации JWT в Auth Service.
 
-## База данных: patient_db
-### Таблица: patient
+---
+
+## База данных: [patient_db](..%2FDB%2Fpatient_db.md)
+
+---
 
 ## API  
 ### REST 
@@ -49,6 +60,8 @@
 |:----------------------------------------------------------------------|:---|:--------------------| :--- | :--- | :--- | :--- |
 | [PatientEventProducer](..%2FAPI%2FPatientEventProducer.md)            | `patient` | `PATIENT_CREATED` | Kafka TCP           | Protobuf | `null` | Нотификация о создании нового пациента |
 
+---
+
 ## Переменные окружения
 ### Application (patient-service)
 | Переменная | Значение                                                                                                                | Описание                                                    |
@@ -71,6 +84,8 @@
 | **POSTGRES_USER** | admin_user | Логин администратора БД |
 | **POSTGRES_PASSWORD** | password | Пароль администратора БД |
 
+---
+
 ## Сетевые параметры
 
 | Параметр | Значение | Описание |
@@ -81,6 +96,9 @@
 | **Target gRPC Host** | billing-service:9001 | Адрес назначения для gRPC вызовов |
 | **Target DB Host** | patient-service-db:5432 | Адрес подключения к PostgreSQL |
 | **Target Kafka Host** | kafka:9092 <br> (Infra: localhost.localstack.cloud:4510, 4511, 4512) | Адрес подключения к брокеру Kafka |
+
+---
+
 ## Swagger
 | Интерфейс | URL              | Описание |
 | :--- |:-----------------| :--- |
