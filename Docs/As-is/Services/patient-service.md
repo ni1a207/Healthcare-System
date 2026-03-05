@@ -14,7 +14,7 @@
 * **Protocols**: REST (HTTP), gRPC/Kafka (Protobuf 4.29.1).
 * **Build Tool**: Maven 3.9.9.
 * **Infrastructure**: Docker / AWS CDK (Fargate).
-* **Logging**: SLF4J (Logback).
+* **Logging**: SLF4J.
   
  *В коде присутствует закомментированная конфигурация для H2 (In-memory), которая может быть активирована для локальных тестов.*
 
@@ -38,31 +38,31 @@
 Интеграция с `billing-service`. Синхронное создание финансового счета пациента через адаптер BillingServiceGrpcClient.
 
 
-| Метод | Путь (Service/Method) | Протокол | Формат | Описание |
-| :--- | :--- | :--- | :--- | :--- |
-| `CreateBillingAccount` | `BillingService/CreateBillingAccount` | gRPC (HTTP/2) | Protobuf | Создание биллингового аккаунта пациента |
+| Метод                                                      | Путь (Service/Method) | Протокол | Формат | Описание |
+|:-----------------------------------------------------------| :--- | :--- | :--- | :--- |
+| [CreateBillingAccount](..%2FAPI%2FCreateBillingAccount.md) | `BillingService/CreateBillingAccount` | gRPC (HTTP/2) | Protobuf | Создание биллингового аккаунта пациента |
 
 ### Kafka Producer
 Сервис публикует события в брокер сообщений для уведомления других компонентов системы.
 
-| Топик | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `patient` | `PATIENT_CREATED` | Kafka TCP | Protobuf | `null` | Нотификация о создании нового пациента |
+| Kafka Point                                                           | Топик | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
+|:----------------------------------------------------------------------|:---|:--------------------| :--- | :--- | :--- | :--- |
+| [PatientEventProducer](..%2FAPI%2FPatientEventProducer.md)            | `patient` | `PATIENT_CREATED` | Kafka TCP           | Protobuf | `null` | Нотификация о создании нового пациента |
 
 ## Переменные окружения
 ### Application (patient-service)
-| Переменная | Значение | Описание |
-| :--- | :--- | :--- |
-| **SERVER_PORT** | 4000 | Порт сервиса |
-| **SPRING_DATASOURCE_URL** | jdbc:postgresql://patient-service-db:5432/db <br> (Infra: jdbc:postgresql://patient-service-db:5432/patient-service-db) | URL для подключения к PostgreSQL |
-| **SPRING_DATASOURCE_USERNAME** | admin_user | Имя пользователя базы данных |
-| **SPRING_DATASOURCE_PASSWORD** | password | Пароль пользователя базы данных |
-| **SPRING_KAFKA_BOOTSTRAP_SERVERS** | kafka:9092 <br> (Infra: localhost.localstack.cloud:4510, 4511, 4512) | Адрес брокера Kafka для Producer |
-| **BILLING_SERVICE_ADDRESS** | billing-service <br> (Infra: host.docker.internal) | Хост gRPC-Billing Service |
-| **BILLING_SERVICE_GRPC_PORT** | 9005 <br> (Infra: 9001) | Порт gRPC-сервиса биллинга |
-| **SPRING_JPA_HIBERNATE_DDL_AUTO** | update | Автоматическое обновление схемы БД |
-| **SPRING_SQL_INIT_MODE** | always | Режим выполнения SQL-скриптов (data.sql) |
-| **JAVA_TOOL_OPTIONS** | -agentlib:jdwp=...address=*:5005 | Параметры для удаленной отладки (Debug) |
+| Переменная | Значение                                                                                                                | Описание                                                    |
+| :--- |:------------------------------------------------------------------------------------------------------------------------|:------------------------------------------------------------|
+| **SERVER_PORT** | 4000                                                                                                                    | Порт сервиса                                                |
+| **SPRING_DATASOURCE_URL** | jdbc:postgresql://patient-service-db:5432/db <br> (Infra: jdbc:postgresql://patient-service-db:5432/patient-service-db) | URL для подключения к PostgreSQL                            |
+| **SPRING_DATASOURCE_USERNAME** | admin_user                                                                                                              | Имя пользователя базы данных                                |
+| **SPRING_DATASOURCE_PASSWORD** | password                                                                                                                | Пароль пользователя базы данных                             |
+| **SPRING_KAFKA_BOOTSTRAP_SERVERS** | kafka:9092 <br> (Infra: localhost.localstack.cloud:4510, 4511, 4512)                                                    | Адрес брокера Kafka для Producer                            |
+| **BILLING_SERVICE_ADDRESS** | billing-service <br> (Infra: host.docker.internal)                                                                      | Хост gRPC-Billing Service                                   |
+| **BILLING_SERVICE_GRPC_PORT** | 9001                                                                                                                    | Порт gRPC-сервиса биллинга                                  |
+| **SPRING_JPA_HIBERNATE_DDL_AUTO** | update                                                                                                                  | Автоматическое обновление схемы БД                          |
+| **SPRING_SQL_INIT_MODE** | always                                                                                                                  | Режим выполнения SQL-скриптов (data.sql)    (dev/test only) |
+| **JAVA_TOOL_OPTIONS** | -agentlib:jdwp=...address=*:5005                                                                                        | Параметры для удаленной отладки (dev/test only)             |
 
 ### Database (patient-service-db)
 | Переменная | Значение | Описание |
@@ -78,11 +78,11 @@
 | **Service Name** | patient-service | Имя хоста в Docker-сети |
 | **Internal Port** | 4000 | Входящий HTTP порт (server.port) |
 | **Debug Port** | 5005 | Порт для подключения Java Debugger |
-| **Target gRPC Host** | billing-service:9005 <br> (Infra: host.docker.internal:9001) | Адрес назначения для gRPC вызовов |
+| **Target gRPC Host** | billing-service:9001 | Адрес назначения для gRPC вызовов |
 | **Target DB Host** | patient-service-db:5432 | Адрес подключения к PostgreSQL |
 | **Target Kafka Host** | kafka:9092 <br> (Infra: localhost.localstack.cloud:4510, 4511, 4512) | Адрес подключения к брокеру Kafka |
 ## Swagger
 | Интерфейс | URL              | Описание |
 | :--- |:-----------------| :--- |
 | **Swagger UI** | /swagger-ui.html | Локальный UI документации |
-| **OpenAPI JSON** | /v3/api-docs     | Спецификация API в формате JSON |
+| **OpenAPI JSON** | /v3/api-docs<br/>(Через api-gateway: /api-docs/patients)    | Спецификация API в формате JSON |

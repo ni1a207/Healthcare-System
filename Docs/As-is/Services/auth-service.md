@@ -15,7 +15,7 @@
 * **Build Tool**: Maven 3.9.9.
 * **Infrastructure**: Docker (Port 4005).
 * **Documentation**: Springdoc OpenAPI 2.6.0.
-* **Logging**: SLF4J.
+* **Logging**: SLF4J (доступен, но не используется в текущей реализации).
 
 ## Безопасность и контроль доступа
 

@@ -14,7 +14,7 @@
 * **Library**: grpc-spring-boot-starter (v3.1.0.RELEASE).
 * **Build Tool**: Maven 3.9.9.
 * **Infrastructure**: Docker (Multi-stage build).
-* **Logging**: SLF4J (Logback).
+* **Logging**: SLF4J.
 
 ## Безопасность и контроль доступа
 В текущей конфигурации механизмы авторизации и аутентификации (Spring Security) не подключены. Доступ к gRPC-методам открыт для внутренних компонентов системы (api-gateway не имеет прямого доступа к данному сервису).
@@ -34,7 +34,7 @@
 
 | Переменная | Значение (по умолчанию) | Описание |
 | :--- | :--- | :--- |
-| **SERVER_PORT** | 4001 | Порт для HTTP (Actuator/Health) |
+| **SERVER_PORT** | 4001 | HTTP порт Spring Boot (не используется для входящего трафика) |
 | **GRPC_SERVER_PORT** | 9001 | Порт для gRPC взаимодействия |
 
 ## Сетевые параметры
@@ -42,6 +42,6 @@
 | Параметр | Значение | Описание |
 | :--- | :--- | :--- |
 | **Service Name** | billing-service | Имя хоста для внутреннего взаимодействия |
-| **Internal HTTP Port** | 4001 | Служебный порт (Spring Web) |
+| **Internal HTTP Port** | 4001 | Служебный порт|
 | **Internal gRPC Port** | 9001 | Основной порт приема трафика |
 
