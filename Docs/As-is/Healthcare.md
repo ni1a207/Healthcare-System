@@ -5,7 +5,6 @@
 
 ## Архитектура системы (C4 Container)
 ![HealthcareC4.svg](Diagrams%2FHealthcareC4.svg)
-
 ---
 ## Бизнес-процессы
 

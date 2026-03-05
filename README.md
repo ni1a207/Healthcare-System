@@ -20,6 +20,7 @@
 ---
 
 ## Архитектура системы (C4 Container Diagram)
+
 ![HealthcareC4.svg](Docs%2FAs-is%2FDiagrams%2FHealthcareC4.svg)
 ---
 
