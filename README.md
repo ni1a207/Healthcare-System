@@ -15,7 +15,7 @@
 | `Docs/As-is/Diagrams` | C4, Sequence, BPMN диаграммы |
 | `Docs/As-is/Services` | Документация сервисов |
 | `Docs/As-is/` [Healthcare.md](Docs%2FAs-is%2FHealthcare.md) | Главная техническая спецификация (агрегирует все артефакты AS-IS) |
-| `Docs/To-be` | Проектирование целевого состояния (UI-прототипы + ТЗ) |
+| `Docs/To-be` | Проектирование целевого состояния (UI-прототипы + ТЗ) <br/>[![Figma](https://img.shields.io/badge/Figma-Макеты-F24E1E?logo=figma)](https://www.figma.com/design/nKnObYbrARzxXtGOSf1osv/Healthcare-System?node-id=0-1&t=Bonh01LYuRSGqFPP-1)|
 | `Java` | Исходный код Backend. Базовый проект: java-spring-microservices |
 ---
 
