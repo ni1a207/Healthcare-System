@@ -1,8 +1,8 @@
 # ERP Healthcare System 
 ![AS-IS](https://img.shields.io/badge/AS--IS-Done-green)
-![TO-BE](https://img.shields.io/badge/TO--BE-Planned-lightgrey)
-![Figma](https://img.shields.io/badge/Figma-In%20Progress-yellow)
-![ТЗ](https://img.shields.io/badge/ТЗ-Planned-lightgrey)
+![TO-BE](https://img.shields.io/badge/TO--BE-In%20Progress-yellow)
+![Figma](https://img.shields.io/badge/Figma-Done-green)
+![ТЗ](https://img.shields.io/badge/ТЗ-In%20Progress-yellow)
 ---
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Репозиторий содержит артефакты системного анализа медицинской ERP-системы на базе микросервисной архитектуры: техническую документацию AS-IS, архитектурные схемы C4, sequence-диаграммы, BPMN-процессы и API-спецификации. Цель — демонстрация навыков SA/BA на реальном проекте.
