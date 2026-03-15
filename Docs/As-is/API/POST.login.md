@@ -17,10 +17,10 @@
 
 Body (JSON):
 
-| Параметр | Тип данных | Обязательность | Описание | Значение/пример | Маппинг с auth_db |
-|:------|:-----------|:---------------|:---------|:-----------------|:------------------|
-| email | string | да | Логин пользователя | user@example.com | users.email |
-| password | string | да | Пароль пользователя | password123 | users.password |
+| Параметр | Тип данных | Обязательность | Описание | Значение/пример | Маппинг с auth-service-db |
+|:------|:-----------|:---------------|:---------|:-----------------|:--------------------------|
+| email | string | да | Логин пользователя | user@example.com | users.email               |
+| password | string | да | Пароль пользователя | password123 | users.password            |
 
 
 </details>
@@ -30,9 +30,9 @@ Body (JSON):
 
 Body (JSON):
 
-| Параметр | Тип данных | Описание | Значение/пример | Маппинг с auth_db |
-|:------|:---------------|:---------|:-----------------|:------------------|
-| token | string |  Сгенерированный JWT-токен | eyJhbGciOiJIUzI1NiJ9... | - |
+| Параметр | Тип данных | Описание | Значение/пример | Маппинг с auth-service-db |
+|:------|:---------------|:---------|:-----------------|:--------------------------|
+| token | string |  Сгенерированный JWT-токен | eyJhbGciOiJIUzI1NiJ9... | -                         |
 
 </details>
 
@@ -120,7 +120,7 @@ Response code : 200 OK
 5. `AuthController` вызывает метод `authenticate(loginRequestDTO)` в `AuthService`.
 
 
-6. `AuthService` через `UserService` вызывает метод `findByEmail(email)`, который обращается к `UserRepository`. `Hibernate` формирует и выполняет SQL-запрос к таблице `users` базы данных `auth_db`: `SELECT * FROM users WHERE email = ?`. Если запись не найдена — `UserRepository` возвращает `Optional.empty()`, `AuthService` возвращает `Optional.empty()`, `AuthController` возвращает HTTP статус-код `401 UNAUTHORIZED`.
+6. `AuthService` через `UserService` вызывает метод `findByEmail(email)`, который обращается к `UserRepository`. `Hibernate` формирует и выполняет SQL-запрос к таблице `users` базы данных `auth-service-db`: `SELECT * FROM users WHERE email = ?`. Если запись не найдена — `UserRepository` возвращает `Optional.empty()`, `AuthService` возвращает `Optional.empty()`, `AuthController` возвращает HTTP статус-код `401 UNAUTHORIZED`.
 
 
 7. `AuthService` верифицирует пароль. Из найденного объекта `User` извлекается хеш пароля (поле password) и передаётся вместе с сырым паролем из `LoginRequestDTO` в метод `passwordEncoder.matches(rawPassword, hashedPassword) `компонента `BCryptPasswordEncoder`. Алгоритм `BCrypt` извлекает соль из хеша, применяет её к сырому паролю и выполняет побитовое сравнение. Если результаты не совпадают — `matches()` возвращает `false`, `AuthService` возвращает `Optional.empty()`, `AuthController` возвращает HTTP статус-код `401 UNAUTHORIZED`. Если поле `password` в `LoginRequestDTO` имеет значение `null` — `BCryptPasswordEncoder.matches()` выбрасывает `IllegalArgumentException`, `AuthController` возвращает HTTP статус-код `500 INTERNAL SERVER ERROR`.

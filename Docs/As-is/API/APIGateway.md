@@ -9,7 +9,7 @@
 3. `JwtValidationGatewayFilterFactory` извлекает значение заголовка `Authorization` из входящего запроса. Если заголовок отсутствует или не начинается с префикса `Bearer ` — `api-gateway` немедленно возвращает клиенту HTTP статус-код `401 UNAUTHORIZED`, запрос не проксируется.
 
 
-4. `JwtValidationGatewayFilterFactory` через реактивный `WebClient` инициирует HTTP-запрос `GET /validate` к `auth-service` с заголовком `Authorization: Bearer <token>`.
+4. `JwtValidationGatewayFilterFactory` через реактивный `WebClient` инициирует HTTP-запрос [GET /validate](GET.validate.md) к `auth-service` с заголовком `Authorization: Bearer <token>`.
 
 
 5. `auth-service` выполняет валидацию токена и возвращает ответ. Если `auth-service` недоступен или вернул любой не-2xx статус — `WebClient` выбрасывает `WebClientResponseException`, которое не перехватывается — `api-gateway` возвращает клиенту HTTP статус-код `500 INTERNAL SERVER ERROR`.

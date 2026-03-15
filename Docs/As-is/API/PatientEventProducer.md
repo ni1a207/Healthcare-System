@@ -20,12 +20,12 @@
 ## Структура сообщения (Схема Protobuf)
 Параметры файла `PatientEvent.proto`:
 
-| Параметр | Тип данных | Обязательность | Описание | Значение/пример| Маппинг с patient_db |
-| --- | --- | --- | --- |-|-----------------|
-| patientId | string | Да | Уникальный идентификатор пациента (UUID) |550e8400-e29b-41d4-a716-446655440000| patient.id                |
-| name | string | Да | ФИО пациента |John Doe| patient.name                |
-| email | string | Да | Электронная почта пациента |john.doe@example.com| patient.email              |
-| event_type | string | Да | Тип события |PATIENT_CREATED| Hardcoded value                |
+| Параметр | Тип данных | Обязательность | Описание | Значение/пример| Маппинг с patient-service-db |
+| --- | --- | --- | --- |-|------------------------------|
+| patientId | string | Да | Уникальный идентификатор пациента (UUID) |550e8400-e29b-41d4-a716-446655440000| patient.id                   |
+| name | string | Да | ФИО пациента |John Doe| patient.name                 |
+| email | string | Да | Электронная почта пациента |john.doe@example.com| patient.email                |
+| event_type | string | Да | Тип события |PATIENT_CREATED| Hardcoded value              |
 
 ---
 
@@ -44,7 +44,7 @@
 ## Алгоритм публикации события
 Публикация происходит в процессе выполнения метода [POST /patients](POST.patients.md) .
 
-1. Триггер: успешное сохранение записи в `patient_db` и успешный gRPC-вызов к `billing-service`. `PatientService` вызывает метод `sendEvent(patient)` в `KafkaProducer`, передавая уже готовый объект `Patient`.
+1. Триггер: успешное сохранение записи в `patient-service-db` и успешный gRPC-вызов к `billing-service`. `PatientService` вызывает метод `sendEvent(patient)` в `KafkaProducer`, передавая уже готовый объект `Patient`.
 
 
 2. `KafkaProducer` формирует объект `PatientEvent` через `Protobuf builder`: `PatientEvent.newBuilder().setPatientId(...).setName(...).setEmail(...).setEventType("PATIENT_CREATED").build()`. Данные берутся напрямую из переданного объекта `Patient` — обращения к БД не происходит.

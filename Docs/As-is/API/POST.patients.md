@@ -17,13 +17,13 @@
 
 Header:
 
-| Параметр  | Тип данных | Обязательность | Описание                                        | Значение/пример  | Маппинг с patient_db |
+| Параметр  | Тип данных | Обязательность | Описание                                        | Значение/пример  | Маппинг с ppatient-service-db |
 |:------|:-----------|:---------------|:------------------------------------------------|:-----------------|:---------------------|
 |Content-Type|string|да| Тип передаваемого контента                      | application/json | -                    |
 | Authorization | string | да | Токен доступа (на уровне сервиса нет валидации) | Bearer <token> | - |
 Body (JSON):
 
-| Параметр | Тип данных | Обязательность | Описание                                             | Значение/пример   | Маппинг с patient_db    |
+| Параметр | Тип данных | Обязательность | Описание                                             | Значение/пример   | Маппинг с patient-service-db    |
 |:---------|:-----------|:---------------|:-----------------------------------------------------|:------------------|:------------------------|
 | name | string | да | Имя пациента (max 100 символов) | John Doe | patient.name            |
 | email | string | да | Электронная почта (должна быть уникальной) | john.doe@example.com | patient.email           |
@@ -217,13 +217,13 @@ Response body (json):
 6. `PatientController` вызывает метод `createPatient(patientRequestDTO patientRequestDTO)` в `PatientService`.
 
 
-7. `PatientService` выполняет проверку уникальности `email`, вызывая `patientRepository.existsByEmail(patientRequestDTO.getEmail())`. Это инициирует SQL-запрос в базу данных `patient_db`, в таблицу `patient` : `SELECT count(*) FROM patient WHERE email = ?`. Если такой `email` уже существует в БД, выбрасывается исключение `EmailAlreadyExistsException`, которое перехватывает `GlobalExceptionHandler`, клиенту возвращается HTTP статус-код `400 BAD REQUEST, message: "Email address already exists"`.
+7. `PatientService` выполняет проверку уникальности `email`, вызывая `patientRepository.existsByEmail(patientRequestDTO.getEmail())`. Это инициирует SQL-запрос в базу данных `patient-service-db`, в таблицу `patient` : `SELECT count(*) FROM patient WHERE email = ?`. Если такой `email` уже существует в БД, выбрасывается исключение `EmailAlreadyExistsException`, которое перехватывает `GlobalExceptionHandler`, клиенту возвращается HTTP статус-код `400 BAD REQUEST, message: "Email address already exists"`.
 
 
 8. `PatientMapper` мапит данные из `PatientRequestDTO` в сущность `Patient`, парсит параметры `dateOfBirth` и `registeredDate` через `LocalDate.parse()`. Если строка не соответствует формату `ISO_LOCAL_DATE (YYYY-MM-DD)`, выбрасывается `DateTimeParseException`, `GlobalExceptionHandler` не перехватывает это исключение — клиенту возвращается HTTP статус-код `500 INTERNAL SERVER ERROR`.
 
 
-9. `PatientRepository` делает запись в базу данных `patient_db` в таблицу `patient`. `Hibernate` запрашивает соединение у пула `HikariCP`, генерирует уникальный идентификатор записи `UUID` и выполняет SQL-запрос `INSERT INTO patient (id, name, email, address, date_of_birth, registered_date) VALUES (?, ?, ?, ?, ?, ?);`. 
+9. `PatientRepository` делает запись в базу данных `patient-service-db` в таблицу `patient`. `Hibernate` запрашивает соединение у пула `HikariCP`, генерирует уникальный идентификатор записи `UUID` и выполняет SQL-запрос `INSERT INTO patient (id, name, email, address, date_of_birth, registered_date) VALUES (?, ?, ?, ?, ?, ?);`. 
 
 
 10. `PatientService` формирует gRPC-сообщение `BillingRequest` и вызывает `BillingServiceGrpcClient`.
@@ -241,7 +241,7 @@ Response body (json):
 }
 ~~~    
 
-> **Важно**: Запись в базе данных `patient_db` на шаге 9 уже зафиксирована (COMMIT). В случае ошибки, в системе возникает рассинхрон: пациент в БД создан, но финансовый счет в `BillingService` отсутствует.
+> **Важно**: Запись в базе данных `patient-service-db` на шаге 9 уже зафиксирована (COMMIT). В случае ошибки, в системе возникает рассинхрон: пациент в БД создан, но финансовый счет в `BillingService` отсутствует.
 
 13. При успешном ответе от `Billing Service` (статус OK), `PatientService` вызывает `KafkaProducer.sendEvent(newPatient)`.
 

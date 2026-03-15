@@ -49,7 +49,7 @@
 
 ---
 
-## База данных: [auth_db](..%2FDB%2Fauth_db.md)
+## База данных: [auth-service-db](..%2FDB%2Fauth_db.md)
 
 ---
 

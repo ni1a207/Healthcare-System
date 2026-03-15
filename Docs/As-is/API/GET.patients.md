@@ -17,7 +17,7 @@
 
 Header:
 
-| Параметр  | Тип данных | Обязательность | Описание                                        | Значение/пример  | Маппинг с patient_db |
+| Параметр  | Тип данных | Обязательность | Описание                                        | Значение/пример  | patient-service-db |
 |:------|:-----------|:---------------|:------------------------------------------------|:-----------------|:---------------------|
 | Authorization | string | да | Токен доступа (на уровне сервиса нет валидации) | Bearer <token> | - |
 </details> 
@@ -33,7 +33,7 @@ Header:
       <th>Тип данных</th>
       <th>Описание</th>
       <th>Значение/пример</th>
-      <th>Маппинг с patient_db</th>
+      <th>Маппинг с patient-service-db</th>
     </tr>
   </thead>
   <tbody>
@@ -164,10 +164,10 @@ Response body (json):
 4. `PatientService` вызывает метод `findAll()` в `PatientRepository`. `PatientRepository` делегирует вызов реализации `SimpleJpaRepository` (Spring Data JPA Proxy).
 
 
-5. `Hibernate` формирует и выполняет SQL-запрос к таблице `patient` базы данных `patient_db`: `SELECT * FROM patient`. Для выполнения запроса `Hibernate` запрашивает соединение у пула `HikariCP`, который передаёт запрос через JDBC Driver в базу данных. Если соединение недоступно или база данных недоступна — выбрасывается исключение, которое пробрасывается по цепочке через `PatientRepository` → `PatientService` → `PatientController` — Spring Boot возвращает клиенту HTTP cтатус-код `500 INTERNAL SERVER ERROR`.
+5. `Hibernate` формирует и выполняет SQL-запрос к таблице `patient` базы данных `patient-service-db`: `SELECT * FROM patient`. Для выполнения запроса `Hibernate` запрашивает соединение у пула `HikariCP`, который передаёт запрос через JDBC Driver в базу данных. Если соединение недоступно или база данных недоступна — выбрасывается исключение, которое пробрасывается по цепочке через `PatientRepository` → `PatientService` → `PatientController` — Spring Boot возвращает клиенту HTTP cтатус-код `500 INTERNAL SERVER ERROR`.
 
 
-6. `patient_db` выполняет запрос и возвращает `ResultSet`.
+6. `patient-service-db` выполняет запрос и возвращает `ResultSet`.
 
 
 7. `Hibernate` выполняет `Hydration` — маппинг строк `ResultSet` в поля Java-объектов сущности `Patient`. `PatientRepository` возвращает `List<Patient>` в `PatientService`.

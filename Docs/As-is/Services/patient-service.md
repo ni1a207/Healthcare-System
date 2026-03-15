@@ -32,7 +32,7 @@
 
 ---
 
-## База данных: [patient_db](..%2FDB%2Fpatient_db.md)
+## База данных: [patient-service-db](..%2FDB%2Fpatient_db.md)
 
 ---
 
@@ -46,15 +46,12 @@
 | [DELETE /patients/{id}](..%2FAPI%2FDELETE.patients.id.md) | Удаление пациента из системы                       |
 
 ### gRPC
-Интеграция с `billing-service`. Синхронное создание финансового счета пациента через адаптер BillingServiceGrpcClient.
-
 
 | Метод                                                      | Путь (Service/Method) | Протокол | Формат | Описание |
 |:-----------------------------------------------------------| :--- | :--- | :--- | :--- |
 | [CreateBillingAccount](..%2FAPI%2FCreateBillingAccount.md) | `BillingService/CreateBillingAccount` | gRPC (HTTP/2) | Protobuf | Создание биллингового аккаунта пациента |
 
 ### Kafka Producer
-Сервис публикует события в брокер сообщений для уведомления других компонентов системы.
 
 | Kafka Point                                                           | Топик | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
 |:----------------------------------------------------------------------|:---|:--------------------| :--- | :--- | :--- | :--- |

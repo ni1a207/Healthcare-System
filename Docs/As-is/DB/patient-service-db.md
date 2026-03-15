@@ -1,4 +1,4 @@
-![img.png](patient_db.png)
+![img.png](patient-service-db.png)
 
 #### Таблица: patient
 | Название | Обяз. | Тип          | Ограничения | Описание                               | Пример |

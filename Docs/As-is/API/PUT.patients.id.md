@@ -17,20 +17,20 @@
 
 Path:
 
-| Параметр | Тип данных | Обязательность | Описание                          | Значение/пример  | Маппинг с patient_db |
+| Параметр | Тип данных | Обязательность | Описание                          | Значение/пример  | Маппинг с patient-service-db |
 |:---------|:-----------|:---------------|:----------------------------------|:-----------------|:---------------------|
 | id       | UUID       |да| Уникальный идентификатор пациента | 123e4567-e89b-12d3-a456-426614174000 | patient.id           |
 
 
 Header:
 
-| Параметр  | Тип данных | Обязательность | Описание                                        | Значение/пример  | Маппинг с patient_db |
+| Параметр  | Тип данных | Обязательность | Описание                                        | Значение/пример  | Маппинг с patient-service-db |
 |:------|:-----------|:---------------|:------------------------------------------------|:-----------------|:---------------------|
 |Content-Type|string|да| Тип передаваемого контента                      | application/json | -                    |
 | Authorization | string | да | Токен доступа (на уровне сервиса нет валидации) | Bearer <token> | - |
 Body (JSON):
 
-| Параметр | Тип данных | Обязательность | Описание                                             | Значение/пример   | Маппинг с patient_db    |
+| Параметр | Тип данных | Обязательность | Описание                                             | Значение/пример   | Маппинг с patient-service-db    |
 |:---------|:-----------|:---------------|:-----------------------------------------------------|:------------------|:------------------------|
 | name | string | да | Имя пациента (max 100 символов) | John Doe | patient.name            |
 | email | string | да | Электронная почта (должна быть уникальной) | john.doe@example.com | patient.email           |
@@ -42,7 +42,7 @@ Body (JSON):
 <summary><b><font color="#2196F3">Выходные параметры</font></b></summary>
 Body (JSON):
 
-| Параметр | Тип данных | Описание | Значение/пример | Маппинг с patient_db |
+| Параметр | Тип данных | Описание | Значение/пример | Маппинг с patient-service-db |
 |:---|:---|:---|:---|:---|
 | id | string | Уникальный идентификатор пациента (UUID) | 123e4567-e89b-12d3-a456-426614174000 | patient.id |
 | name | string | Имя пациента | John Doe | patient.name |
@@ -216,7 +216,7 @@ Response body (json):
 6. `PatientController` вызывает метод `updatePatient(id, patientRequestDTO)` в `PatientService`.
 
 
-7. `PatientService` выполняет поиск пациента по `id`, вызывая `patientRepository.findById(id)`. `Hibernate` выполняет SQL-запрос к таблице `patient` базы данных `patient_db`: `SELECT * FROM patient WHERE id = ?`. Если запись не найдена — выбрасывается `PatientNotFoundException`, `GlobalExceptionHandler` перехватывает исключение и возвращает клиенту HTTP статус-код `400 BAD REQUEST, message: "Patient not found"`.
+7. `PatientService` выполняет поиск пациента по `id`, вызывая `patientRepository.findById(id)`. `Hibernate` выполняет SQL-запрос к таблице `patient` базы данных `patient-service-db`: `SELECT * FROM patient WHERE id = ?`. Если запись не найдена — выбрасывается `PatientNotFoundException`, `GlobalExceptionHandler` перехватывает исключение и возвращает клиенту HTTP статус-код `400 BAD REQUEST, message: "Patient not found"`.
 
 
 8. `PatientService` выполняет проверку уникальности `email`, вызывая `patientRepository.existsByEmailAndIdNot(email, id)`. Это исключает из проверки самого пациента (допускает сохранение того же email). SQL-запрос: `SELECT count(*) FROM patient WHERE email = ? AND id != ?`. Если такой `email` уже существует у другого пациента — выбрасывается `EmailAlreadyExistsException`, `GlobalExceptionHandler` перехватывает исключение и возвращает клиенту HTTP статус-код `400 BAD REQUEST, message: "Email address already exists"`.
