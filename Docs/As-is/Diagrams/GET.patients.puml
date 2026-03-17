@@ -14,7 +14,7 @@ box "patient-service" #5D6D7E
     participant "PatientMapper" as Mapper #White
 end box
 
-database "patient_db" as DB #LightBlue
+database "patient-service-db" as DB #LightBlue
 
 group #LightCyan Процесс получения списка пациентов\nВнешний URL: GET {gateway-host}/api/patients → Внутренний URL: GET patient-service:4000/patients
 

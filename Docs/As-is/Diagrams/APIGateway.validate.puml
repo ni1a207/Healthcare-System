@@ -3,7 +3,7 @@ skinparam Shadowing true
 skinparam RoundCorner 5
 skinparam MaxMessageSize 250
 
-participant "Single Page Application" as SPA #LightBlue
+participant "frontend" as SPA #LightBlue
 
 box "api-gateway" #5D6D7E
     participant "Route Configuration" as RC #White

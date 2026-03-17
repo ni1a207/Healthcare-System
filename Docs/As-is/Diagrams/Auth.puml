@@ -5,7 +5,7 @@ skinparam MaxMessageSize 250
 participant "frontend" as FE #FFF2CC
 boundary "api-gateway" as GW #FEF9E7
 participant "auth-service" as Auth #EBF5FB
-database "auth-db" as DB #EAFAF1
+database "auth-service-db" as DB #EAFAF1
 autonumber "<b>[0]</b>"
 group #LightCyan Аутентификации
     FE -> GW: POST /api/auth/login\n(JSON body)

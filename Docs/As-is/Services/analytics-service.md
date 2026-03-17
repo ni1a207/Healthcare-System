@@ -37,9 +37,9 @@
 ### Kafka Consumer
 Сервис считывает события в брокере сообщений.
 
-| Kafka Point                                                           | Топик | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
-|:----------------------------------------------------------------------|:---|:--------------------| :--- | :--- | :--- | :--- |
-| [PatientEventConsumer](..%2FAPI%2FPatientEventConsumer.md)            | `patient` | `PATIENT_CREATED` | Kafka TCP           | Protobuf | `null` | Нотификация о создании нового пациента |
+| Kafka Point                                                           | Топик   | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
+|:----------------------------------------------------------------------|:--------|:--------------------| :--- | :--- |:-----------| :--- |
+| [PatientEventConsumer](..%2FAPI%2FPatientEventConsumer.md)            | patient | PATIENT_CREATED     | Kafka TCP           | Protobuf | null       | Нотификация о создании нового пациента |
 
 ---
 

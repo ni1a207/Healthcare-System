@@ -17,8 +17,8 @@ box "patient-service" #5D6D7E
     participant "KafkaProducer" as Kafka #White
 end box
 
-database "patient_db" as DB #LightBlue
-participant "Billing-Service" as BS #LightGreen
+database "patient-service-db" as DB #LightBlue
+participant "billing-service" as BS #LightGreen
 queue "Kafka" as KF #FADBD8
 
 group #LightCyan Процесс создания пациента\nВнешний URL: POST {gateway-host}/api/patients → Внутренний URL: POST patient-service:4000/patients

@@ -10,7 +10,7 @@ boundary "api-gateway" as GW #FEF9E7
 
 participant "auth-service" as Auth #EBF5FB
 participant "patient-service" as PS #F4ECF7
-database "patient_db" as DB #F4ECF7
+database "patient-service-db" as DB #F4ECF7
 
 group #LightCyan Удаление данных пациента
 

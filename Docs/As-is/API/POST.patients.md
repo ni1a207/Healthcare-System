@@ -38,7 +38,7 @@ Body (JSON):
 
 | Параметр | Тип данных | Описание                            | Значение/пример | Маппинг с patient_db |
 |:---|:---|:------------------------------------|:---|:---|
-| id | string | Уникальный идентификатор пациента, UUID генерируется сервером | 123e4567-e89b-12d3-a456-426614174000 | patient.id |
+| id | string | Уникальный идентификатор пациента, UUID генерируется сервером | 123e4567-e89b-12d3-a456-426614174000 | patient-service-db |
 | name | string | Имя пациента                        | John Doe | patient.name |
 | email | string | Электронная почта                   | john.doe@example.com | patient.email |
 | address | string | Адрес проживания                    | 123 Main St, Springfield | patient.address |
@@ -229,10 +229,10 @@ Response body (json):
 10. `PatientService` формирует gRPC-сообщение `BillingRequest` и вызывает `BillingServiceGrpcClient`.
 
 
-11. `BillingServiceGrpcClient` выполняет блокирующий вызов метода `createBillingAccount` в `Billing Service`, передаются параметры `patientId` (UUID), `name` и `email`. 
+11. `BillingServiceGrpcClient` выполняет блокирующий вызов метода `createBillingAccount` в `billing-service`, передаются параметры `patientId` (UUID), `name` и `email`. 
  
  
-12. `Billing Service` обрабатывает запрос, возвращает объект с данными открытого счета (в коде данные захардкожены, всегда будет возвращаться объект с заданными параметрами). Если `Billing Service` недоступен или вернул ошибку выбрасывается исключение `StatusRuntimeException`,  `GlobalExceptionHandler` перехватывает ошибку и возвращает клиенту HTTP статус-код `500 INTERNAL SERVER ERROR`. В методе `createPatient` нет блока `try-catch` и аннотации `@Transactional`, выполнение запроса прерывается.
+12. `billing-service` обрабатывает запрос, возвращает объект с данными открытого счета (в коде данные захардкожены, всегда будет возвращаться объект с заданными параметрами). Если `billing-service` недоступен или вернул ошибку выбрасывается исключение `StatusRuntimeException`,  `GlobalExceptionHandler` перехватывает ошибку и возвращает клиенту HTTP статус-код `500 INTERNAL SERVER ERROR`. В методе `createPatient` нет блока `try-catch` и аннотации `@Transactional`, выполнение запроса прерывается.
 
 ~~~json
 {
@@ -241,9 +241,9 @@ Response body (json):
 }
 ~~~    
 
-> **Важно**: Запись в базе данных `patient-service-db` на шаге 9 уже зафиксирована (COMMIT). В случае ошибки, в системе возникает рассинхрон: пациент в БД создан, но финансовый счет в `BillingService` отсутствует.
+> **Важно**: Запись в базе данных `patient-service-db` на шаге 9 уже зафиксирована (COMMIT). В случае ошибки, в системе возникает рассинхрон: пациент в БД создан, но финансовый счет в `billing-service` отсутствует.
 
-13. При успешном ответе от `Billing Service` (статус OK), `PatientService` вызывает `KafkaProducer.sendEvent(newPatient)`.
+13. При успешном ответе от `billing-service` (статус OK), `PatientService` вызывает `KafkaProducer.sendEvent(newPatient)`.
 
 
 14. `KafkaProducer` сериализует Protobuf-сообщение `PatientEvent` (тип PATIENT_CREATED) и отправляет его в топик `patient`. Если Kafka недоступна или возник таймаут, исключение перехватывается внутри `KafkaProducer` — ошибка записывается в лог, выполнение продолжается. Клиент получает `200 OK`, запись в БД сохранена, gRPC-вызов выполнен. Сообщение в Kafka считается потерянным (Data Inconsistency).

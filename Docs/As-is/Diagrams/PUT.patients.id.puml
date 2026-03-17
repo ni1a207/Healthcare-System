@@ -15,7 +15,7 @@ box "patient-service" #5D6D7E
     participant "GlobalExceptionHandler" as GEH #LightSalmon
 end box
 
-database "patient_db" as DB #LightBlue
+database "patient-service-db" as DB #LightBlue
 
 group #LightCyan Процесс обновления пациента\nВнешний URL: PUT {gateway-host}/api/patients/{id} → Внутренний URL: PUT patient-service:4000/patients/{id}
 

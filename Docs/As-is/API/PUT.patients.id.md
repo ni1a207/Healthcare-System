@@ -226,7 +226,7 @@ Response body (json):
 
 > **Важно:** При `DateTimeParseException` изменения не сохраняются в БД — метод `patientRepository.save()` не был вызван.
 
-10. `PatientRepository` сохраняет обновлённую сущность в базу данных `patient_db`. `Hibernate` запрашивает соединение у пула `HikariCP` и выполняет SQL-запрос `UPDATE patient SET name = ?, address = ?, email = ?, date_of_birth = ? WHERE id = ?`.
+10. `PatientRepository` сохраняет обновлённую сущность в базу данных `patient-service-db`. `Hibernate` запрашивает соединение у пула `HikariCP` и выполняет SQL-запрос `UPDATE patient SET name = ?, address = ?, email = ?, date_of_birth = ? WHERE id = ?`.
 
 
 11. `PatientMapper` мапит обновлённую сущность в объект `PatientResponseDTO`.

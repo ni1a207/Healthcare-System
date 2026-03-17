@@ -1,7 +1,7 @@
 # patient-service
 
 ## Назначение
-Сервис управления данными пациентов. Реализует CRUD-операции, синхронное создание платежного аккаунта в Billing Service через gRPC и асинхронную публикацию событий создания пациента в Kafka.
+Сервис управления данными пациентов. Реализует CRUD-операции, синхронное создание платежного аккаунта в `billing-service` через gRPC и асинхронную публикацию событий создания пациента в Kafka.
 
 ---
 
@@ -32,7 +32,7 @@
 
 ---
 
-## База данных: [patient-service-db](..%2FDB%2Fpatient_db.md)
+## База данных: [patient-service-db](..%2FDB%2Fpatient-service-db.md)
 
 ---
 
@@ -47,15 +47,15 @@
 
 ### gRPC
 
-| Метод                                                      | Путь (Service/Method) | Протокол | Формат | Описание |
-|:-----------------------------------------------------------| :--- | :--- | :--- | :--- |
-| [CreateBillingAccount](..%2FAPI%2FCreateBillingAccount.md) | `BillingService/CreateBillingAccount` | gRPC (HTTP/2) | Protobuf | Создание биллингового аккаунта пациента |
+| Метод                                                      | Путь (Service/Method)               | Протокол | Формат | Описание |
+|:-----------------------------------------------------------|:------------------------------------| :--- | :--- | :--- |
+| [CreateBillingAccount](..%2FAPI%2FCreateBillingAccount.md) | BillingService/CreateBillingAccount | gRPC (HTTP/2) | Protobuf | Создание биллингового аккаунта пациента |
 
 ### Kafka Producer
 
-| Kafka Point                                                           | Топик | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
-|:----------------------------------------------------------------------|:---|:--------------------| :--- | :--- | :--- | :--- |
-| [PatientEventProducer](..%2FAPI%2FPatientEventProducer.md)            | `patient` | `PATIENT_CREATED` | Kafka TCP           | Protobuf | `null` | Нотификация о создании нового пациента |
+| Kafka Point                                                           | Топик   | Событие (eventType) | Протокол | Формат | Ключ (Key) | Описание |
+|:----------------------------------------------------------------------|:--------|:--------------------| :--- | :--- |:-----------| :--- |
+| [PatientEventProducer](..%2FAPI%2FPatientEventProducer.md)            | patient | PATIENT_CREATED     | Kafka TCP           | Protobuf | null       | Нотификация о создании нового пациента |
 
 ---
 

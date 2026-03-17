@@ -12,7 +12,7 @@ box "patient-service" #5D6D7E
     participant "PatientRepository" as Repo #White
 end box
 
-database "patient_db" as DB #LightBlue
+database "patient-service-db" as DB #LightBlue
 
 group #LightCyan Процесс удаления пациента\nВнешний URL: DELETE {gateway-host}/api/patients/{id} → Внутренний URL: DELETE patient-service:4000/patients/{id}
 

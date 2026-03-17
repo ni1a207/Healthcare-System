@@ -16,7 +16,7 @@ box "auth-service" #5D6D7E
     participant "JwtUtil" as Jwt #White
 end box
 
-database "auth_db" as DB #LightBlue
+database "auth-service-db" as DB #LightBlue
 
 group #LightCyan Процесс аутентификации\nВнешний URL: POST {gateway-host}/auth/login → Внутренний URL: POST auth-service:4005/login
 
