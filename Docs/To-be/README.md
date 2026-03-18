@@ -24,17 +24,17 @@
 
 ## Функциональные требования MVP
 
-| FR | Название                           | Статус                                                      | Затрагиваемые сервисы | Технический долг |
-|:---|:-----------------------------------|:------------------------------------------------------------|:----------------------|:-----------------|
-| [FR-003](./FR/FR-003.md) | Создание пациента (staff)                 | ![TO-BE](https://img.shields.io/badge/In%20Progress-yellow) | patient-service, billing-service, auth-service, notification-service, kafka | analytics-service является заглушкой — в будущем требует реализации с персистентным хранилищем |
-| FR-005 | Редактирование пациента   (staff)         | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, billing-service, kafka | — |
-| FR-006 | Удаление пациента     (staff)             | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, billing-service, kafka | — |
-| FR-007 | Управление расписанием врачей    (staff)  | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | schedule-service | — |
-| FR-008 | Запись пациента на приём (staff)   | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | appointment-service, schedule-service | — |
-| FR-009 | Личный кабинет пациента            | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, auth-service, appointment-service | — |
-| FR-010 | Самозапись пациента                | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | appointment-service, schedule-service | — |
-| FR-011 | Оплата после визита                | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | billing-service | — |
-| FR-012 | Просмотр карточки пациента (staff) | ![TO-BE](https://img.shields.io/badge/Planned-grey)         | patient-service | — |
+| FR | Название                           | Статус                                                      | Затрагиваемые сервисы |
+|:---|:-----------------------------------|:------------------------------------------------------------|:----------------------|
+| [FR-003](./FR/FR-003.md) | Создание пациента (staff)                 | ![TO-BE](https://img.shields.io/badge/In%20Progress-yellow) | patient-service, billing-service, auth-service, notification-service, kafka | 
+| FR-005 | Редактирование пациента   (staff)         | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, billing-service, kafka | 
+| FR-006 | Удаление пациента     (staff)             | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, billing-service, kafka | 
+| FR-007 | Управление расписанием врачей    (staff)  | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | schedule-service | 
+| FR-008 | Запись пациента на приём (staff)   | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | appointment-service, schedule-service | 
+| FR-009 | Личный кабинет пациента            | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, auth-service, appointment-service | 
+| FR-010 | Самозапись пациента                | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | appointment-service, schedule-service | 
+| FR-011 | Оплата после визита                | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | billing-service | 
+| FR-012 | Просмотр карточки пациента (staff) | ![TO-BE](https://img.shields.io/badge/Planned-grey)         | patient-service | 
 
 ---
 
@@ -84,3 +84,11 @@ FR-011 (Оплата после визита)  ← требует FR-008
 
 Соответствующий FR в таблице выше переводится в статус ![TO-BE](https://img.shields.io/badge/Done-green), файл FR-XXX.md остаётся в TO-BE как исторический артефакт проектирования.
 
+---
+
+## Технический долг
+
+| ID | Описание                                                                                                                                                                                                                      | Затрагиваемые сервисы | Связанный FR |
+|:---|:------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|:----------------------|:-------------|
+| TD-001 | analytics-service является заглушкой — логирует события без персистентного хранилища. В будущем требует реализации с БД и реальной аналитической логикой.                                                                     | analytics-service | FR-003, FR-005, FR-006 |
+| TD-002 | Отсутствует валидация JWT на уровне внутренних сервисов. Сервисы доступны напрямую в обход api-gateway без какой-либо проверки токена. Необходимо добавить валидацию подписи JWT в каждом сервисе используя общий JWT_SECRET. | patient-service, billing-service, analytics-service, notification-service | — |
