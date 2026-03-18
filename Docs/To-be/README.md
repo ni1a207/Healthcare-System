@@ -10,14 +10,16 @@
 
 ## Легенда
 
-В диаграммах и таблицах используется цветовое обозначение изменений относительно AS-IS:
+В диаграммах и таблицах используется обозначение изменений относительно AS-IS:
 
-| Цвет | Значение |
-|:-----|:---------|
-| <font color="#4CAF50">Зелёный</font> | Новый элемент — добавляется в TO-BE |
-| <font color="#F44336"><s>Красный зачёркнутый</s></font> | Удалённый элемент — убирается в TO-BE |
-| Без цвета | Без изменений |
+| Обозначение | Значение |
+|:------------|:---------|
+| 🟢 | Новый элемент — добавляется в TO-BE |
+| 🔴 ~~Зачёркнутый~~ | Удалённый элемент — убирается в TO-BE |
+| Без обозначения | Без изменений |
 
+> **Примечание:** GitHub блокирует рендеринг цветов в Markdown-файлах, поэтому для обозначения изменений используются эмодзи вместо цветового выделения текста.
+ 
 ---
 
 ## Функциональные требования MVP
@@ -25,7 +27,6 @@
 | FR | Название                           | Статус                                                      | Затрагиваемые сервисы | Технический долг |
 |:---|:-----------------------------------|:------------------------------------------------------------|:----------------------|:-----------------|
 | [FR-003](./FR/FR-003.md) | Создание пациента (staff)                 | ![TO-BE](https://img.shields.io/badge/In%20Progress-yellow) | patient-service, billing-service, auth-service, notification-service, kafka | analytics-service является заглушкой — в будущем требует реализации с персистентным хранилищем |
-| FR-004 | Просмотр карточки пациента (staff) | ![TO-BE](https://img.shields.io/badge/Planned-grey)         | patient-service | — |
 | FR-005 | Редактирование пациента   (staff)         | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, billing-service, kafka | — |
 | FR-006 | Удаление пациента     (staff)             | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, billing-service, kafka | — |
 | FR-007 | Управление расписанием врачей    (staff)  | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | schedule-service | — |
@@ -33,6 +34,7 @@
 | FR-009 | Личный кабинет пациента            | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | patient-service, auth-service, appointment-service | — |
 | FR-010 | Самозапись пациента                | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | appointment-service, schedule-service | — |
 | FR-011 | Оплата после визита                | ![TO-BE](https://img.shields.io/badge/Planned-grey)                                                       | billing-service | — |
+| FR-012 | Просмотр карточки пациента (staff) | ![TO-BE](https://img.shields.io/badge/Planned-grey)         | patient-service | — |
 
 ---
 
